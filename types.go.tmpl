@@ -22,6 +22,7 @@ export enum {{$type.Name}} {
 
 {{- if isStructType $type }}
 export interface {{$type.Name}} {
+  __typename?: "{{$type.Name}}"
   {{- range $_, $field := $type.Fields}}
   {{- $isExportable := true -}}
   {{- range $meta := $field.Meta -}}
@@ -58,7 +59,7 @@ export interface {{$method.Name}}Args {
 export interface {{$method.Name}}Return {
 {{- range $_, $output := $method.Outputs}}
   {{$output.Name}}{{if $output.Optional}}?{{end}}: {{template "type" dict "Type" $output.Type "TypeMap" $typeMap}}
-{{- end}}  
+{{- end}}
 }
 {{end}}
 

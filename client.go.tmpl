@@ -43,7 +43,9 @@ export class {{.Name}} implements {{.Name}} {
         {{ if .Outputs | len -}}
         return {
         {{- range $i, $output := .Outputs }}
-          {{$output.Name}}: <{{template "type" dict "Type" $output.Type "TypeMap" $typeMap}}>(_data.{{$output.Name}}),
+          {{- if .Optional }}...(("{{$output.Name}}" in _data && _data.{{$output.Name}}) ? { {{$output.Name}}: <{{template "type" dict "Type" $output.Type "TypeMap" $typeMap}}>({{- if isStructType $output.Type}}{ __typename: "{{template "type" dict "Type" $output.Type "TypeMap" $typeMap}}", ..._data.{{$output.Name}} }{{- else -}} _data.{{$output.Name}} {{- end -}}) } : {}),
+            {{- else }}{{$output.Name}}: <{{template "type" dict "Type" $output.Type "TypeMap" $typeMap}}>({{- if isStructType $output.Type}}{ __typename: "{{template "type" dict "Type" $output.Type "TypeMap" $typeMap}}", ..._data.{{$output.Name}} }{{- else -}} _data.{{$output.Name}} {{- end -}}),
+            {{- end }}
         {{- end }}
         }
         {{- else }}return {}{{- end }}
