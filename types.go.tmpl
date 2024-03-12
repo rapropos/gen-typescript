@@ -22,7 +22,6 @@ export enum {{$type.Name}} {
 
 {{- if isStructType $type }}
 export interface {{$type.Name}} {
-  __typename?: "{{$type.Name}}"
   {{- range $_, $field := $type.Fields}}
   {{- $isExportable := true -}}
   {{- range $meta := $field.Meta -}}

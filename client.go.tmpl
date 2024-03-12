@@ -43,8 +43,8 @@ export class {{.Name}} implements {{.Name}} {
         {{ if .Outputs | len -}}
         return {
         {{- range $i, $output := .Outputs }}
-          {{- if .Optional }}...(("{{$output.Name}}" in _data && _data.{{$output.Name}}) ? { {{$output.Name}}: <{{template "type" dict "Type" $output.Type "TypeMap" $typeMap}}>({{- if isStructType $output.Type}}{ __typename: "{{template "type" dict "Type" $output.Type "TypeMap" $typeMap}}", ..._data.{{$output.Name}} }{{- else -}} _data.{{$output.Name}} {{- end -}}) } : {}),
-            {{- else }}{{$output.Name}}: <{{template "type" dict "Type" $output.Type "TypeMap" $typeMap}}>({{- if isStructType $output.Type}}{ __typename: "{{template "type" dict "Type" $output.Type "TypeMap" $typeMap}}", ..._data.{{$output.Name}} }{{- else -}} _data.{{$output.Name}} {{- end -}}),
+          {{- if .Optional }}...(!!_data && Object.hasOwn(_data, "{{$output.Name}}") ? { {{$output.Name}}: _data.{{$output.Name}} }: {}),
+            {{- else }}{{$output.Name}}: _data.{{$output.Name}},
             {{- end }}
         {{- end }}
         }
@@ -57,6 +57,30 @@ export class {{.Name}} implements {{.Name}} {
   {{end -}}
   {{end}}
 }
+
+  {{range $_, $method := .Methods}}
+  {{$tsmn := firstLetterToLower .Name}}
+  export const {{$tsmn}}Verb = "{{.Name}}";
+    {{ if .Inputs | len }}
+  export function {{$tsmn}}Tqk(args: {{$method.Name}}Args) {
+    return [{{$tsmn}}Verb, args];
+  }
+  export function {{$tsmn}}Tqo(args: {{$method.Name}}Args) {
+    return {
+      queryKey: {{$tsmn}}Tqk(args),
+      queryFn: () => GLOBAL_MOTHERSHIP.{{$tsmn}}(args),
+    };
+  }
+    {{- else }}
+  export const {{$tsmn}}Tqk = [{{$tsmn}}Verb];
+  export const {{$tsmn}}Tqo = {
+      queryKey: {{$tsmn}}Tqk,
+      queryFn: () => GLOBAL_MOTHERSHIP.{{$tsmn}}(),
+      };
+    {{- end}}
+
+    {{- end }}
+
 {{- end -}}
 {{end -}}
 {{if $opts.streaming}}
