@@ -58,27 +58,29 @@ export class {{.Name}} implements {{.Name}} {
   {{end}}
 }
 
-  {{range $_, $method := .Methods}}
-  {{$tsmn := firstLetterToLower .Name}}
-  export const {{$tsmn}}Verb = "{{.Name}}";
-    {{ if .Inputs | len }}
-  export function {{$tsmn}}Tqk(args: {{$method.Name}}Args) {
-    return [{{$tsmn}}Verb, args];
-  }
-  export function {{$tsmn}}Tqo(args: {{$method.Name}}Args) {
-    return {
-      queryKey: {{$tsmn}}Tqk(args),
-      queryFn: () => GLOBAL_MOTHERSHIP.{{$tsmn}}(args),
-    };
-  }
-    {{- else }}
-  export const {{$tsmn}}Tqk = [{{$tsmn}}Verb];
-  export const {{$tsmn}}Tqo = {
-      queryKey: {{$tsmn}}Tqk,
-      queryFn: () => GLOBAL_MOTHERSHIP.{{$tsmn}}(),
-      };
-    {{- end}}
-
+    {{range $_, $method := .Methods}}
+        {{- if $method.StreamOutput }}
+        {{- else }}
+            {{$tsmn := firstLetterToLower .Name}}
+            export const {{$tsmn}}Verb = "{{.Name}}";
+            {{ if .Inputs | len }}
+                export function {{$tsmn}}Tqk(args: {{$method.Name}}Args) {
+                return [{{$tsmn}}Verb, args];
+                }
+                export function {{$tsmn}}Tqo(args: {{$method.Name}}Args) {
+                return {
+                queryKey: {{$tsmn}}Tqk(args),
+                queryFn: () => GLOBAL_MOTHERSHIP.{{$tsmn}}(args),
+                };
+                }
+            {{- else }}
+                export const {{$tsmn}}Tqk = [{{$tsmn}}Verb];
+                export const {{$tsmn}}Tqo = {
+                queryKey: {{$tsmn}}Tqk,
+                queryFn: () => GLOBAL_MOTHERSHIP.{{$tsmn}}(),
+                };
+            {{- end}}
+        {{- end}}
     {{- end }}
 
 {{- end -}}
