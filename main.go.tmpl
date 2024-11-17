@@ -4,6 +4,7 @@
 {{- $opts := dict -}}
 {{- set $opts "client" (ternary (in .Opts.client "" "true") true false) -}}
 {{- set $opts "server" (ternary (in .Opts.server "" "true") true false) -}}
+{{- set $opts "tqk" (ternary (in .Opts.tqk "" "true") true false) -}}
 
 {{- /* Print help on -help. */ -}}
 {{- if exists .Opts "help" -}}
