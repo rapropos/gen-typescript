@@ -75,7 +75,7 @@ export class {{$error.Name}}Error extends WebrpcError {
   constructor(
     name: string = '{{$error.Name}}',
     code: number = {{$error.Code}},
-    message: string = '{{$error.Message}}',
+    message: string = `{{$error.Message}}`,
     status: number = 0,
     cause?: string
   ) {
@@ -91,7 +91,7 @@ export class {{$error.Name}}Error extends WebrpcError {
   constructor(
     name: string = '{{$error.Name}}',
     code: number = {{$error.Code}},
-    message: string = '{{$error.Message}}',
+    message: string = `{{$error.Message}}`,
     status: number = 0,
     cause?: string
   ) {
@@ -110,7 +110,16 @@ export enum errors {
 {{- end}}
 }
 
-const webrpcErrorByCode: { [code: number]: any } = {
+export enum WebrpcErrorCodes {
+{{- range $_, $error := $webrpcErrors}}
+  {{$error.Name}} = {{$error.Code}},
+{{- end }}
+{{- range $_, $error := $schemaErrors}}
+  {{$error.Name}} = {{$error.Code}},
+{{- end }}
+}
+
+export const webrpcErrorByCode: { [code: number]: any } = {
 {{- range $_, $error := $webrpcErrors}}
   [{{$error.Code}}]: {{$error.Name}}Error,
 {{- end }}
