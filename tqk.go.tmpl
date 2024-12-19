@@ -7,6 +7,7 @@
 
 /** TQK **/
 import {GLOBAL_MOTHERSHIP} from "../main.tsx";
+import {queryOptions} from "@tanstack/react-query";
 
 {{range $_, $service := $services }}
 {{ $tqkDone := dict }}
@@ -46,16 +47,16 @@ export const {{$tsbn}}Tqk = [{{$tsbn}}Verb];
 {{- $tsmn := firstLetterToLower $method.Name}}
 {{ if gt (len $method.Inputs) 0 }}
 export function {{$tsmn}}Tqo(args: {{$method.Name}}Args) {
-    return {
+    return queryOptions({
         queryKey: {{$tsbn}}Tqk(args),
         queryFn: () => GLOBAL_MOTHERSHIP.{{$tsmn}}(args),
-    };
+    });
 }
 {{- else -}}
-export const {{$tsmn}}Tqo = {
+export const {{$tsmn}}Tqo = queryOptions({
     queryKey: {{$tsbn}}Tqk,
     queryFn: () => GLOBAL_MOTHERSHIP.{{$tsmn}}(),
-};
+});
 {{ end }}
 {{- end }}
 {{- end }}
