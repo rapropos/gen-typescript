@@ -6,7 +6,6 @@
 {{- if $services}}
 
 /** TQK **/
-import {GLOBAL_MOTHERSHIP} from "../main.tsx";
 import {queryOptions} from "@tanstack/react-query";
 
 {{range $_, $service := $services }}
@@ -46,17 +45,19 @@ export const {{$tsbn}}Tqk = [{{$tsbn}}Verb];
 
 {{- $tsmn := firstLetterToLower $method.Name}}
 {{ if gt (len $method.Inputs) 0 }}
-export function {{$tsmn}}Tqo(args: {{$method.Name}}Args) {
+export function {{$tsmn}}Tqo(mama: {{$service.Name}}, args: {{$method.Name}}Args) {
     return queryOptions({
         queryKey: {{$tsbn}}Tqk(args),
-        queryFn: () => GLOBAL_MOTHERSHIP.{{$tsmn}}(args),
+        queryFn: () => mama.{{$tsmn}}(args),
     });
 }
 {{- else -}}
-export const {{$tsmn}}Tqo = queryOptions({
-    queryKey: {{$tsbn}}Tqk,
-    queryFn: () => GLOBAL_MOTHERSHIP.{{$tsmn}}(),
-});
+export function {{$tsmn}}Tqo(mama: {{$service.Name}}) {
+    return queryOptions({
+        queryKey: {{$tsbn}}Tqk,
+        queryFn: () => mama.{{$tsmn}}(),
+    });
+}
 {{ end }}
 {{- end }}
 {{- end }}
