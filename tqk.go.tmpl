@@ -53,6 +53,24 @@ export function {{$tsbn}}Tqk(args: {{$baseName}}Args) {
 {{- else -}}
 export const {{$tsbn}}Tqk = [{{$tsbn}}Verb];
 {{- end }}
+
+{{- $tsmn := firstLetterToLower $method.Name}}
+{{ if gt (len $method.Inputs) 0 }}
+export function ensure{{$baseName}}(tqc: QueryClient, mama: KingBasuraService, args: {{$method.Name}}Args) {
+    return tqc.ensureQueryData({
+        queryKey: {{$tsbn}}Tqk(args),
+        queryFn: () => mama.{{$tsmn}}(args){{if eq (len $method.Outputs) 1}}.then(rpc => rpc.{{(index $method.Outputs 0).Name}}){{end}},
+    });
+}
+{{- else -}}
+export function ensure{{$baseName}}(tqc: QueryClient, mama: KingBasuraService) {
+    return tqc.ensureQueryData({
+        queryKey: {{$tsbn}}Tqk,
+        queryFn: () => mama.{{$tsmn}}(){{if eq (len $method.Outputs) 1}}.then(rpc => rpc.{{(index $method.Outputs 0).Name}}){{end}},
+    });
+}
+{{- end }}
+
 {{- set $tqkDone $baseName true}}
 {{- end }}
 
@@ -65,23 +83,9 @@ export function {{$tsmn}}Tqo(mama: {{$service.Name}}, args: {{$method.Name}}Args
         queryFn: () => mama.{{$tsmn}}(args){{if eq (len $method.Outputs) 1}}.then(rpc => rpc.{{(index $method.Outputs 0).Name}}){{end}},
     });
 }
-
-export function ensure{{$method.Name}}(tqc: QueryClient, mama: KingBasuraService, args: {{$method.Name}}Args) {
-    return tqc.ensureQueryData({
-        queryKey: {{$tsbn}}Tqk(args),
-        queryFn: () => mama.{{$tsmn}}(args){{if eq (len $method.Outputs) 1}}.then(rpc => rpc.{{(index $method.Outputs 0).Name}}){{end}},
-    });
-}
 {{- else -}}
 export function {{$tsmn}}Tqo(mama: {{$service.Name}}) {
     return queryOptions({
-        queryKey: {{$tsbn}}Tqk,
-        queryFn: () => mama.{{$tsmn}}(){{if eq (len $method.Outputs) 1}}.then(rpc => rpc.{{(index $method.Outputs 0).Name}}){{end}},
-    });
-}
-
-export function ensure{{$method.Name}}(tqc: QueryClient, mama: KingBasuraService) {
-    return tqc.ensureQueryData({
         queryKey: {{$tsbn}}Tqk,
         queryFn: () => mama.{{$tsmn}}(){{if eq (len $method.Outputs) 1}}.then(rpc => rpc.{{(index $method.Outputs 0).Name}}){{end}},
     });
