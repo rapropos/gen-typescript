@@ -1,0 +1,20 @@
+{{define "zod"}}
+
+{{- $types := .Types -}}
+
+{{if $types -}}
+import {z} from "zod/v4";
+{{range $_i, $type := $types -}}
+
+{{- if isStructType $type }}
+export const {{$type.Name}}Schema: z.ZodType<{{$type.Name}}> = z.any();
+{{- end -}}
+
+{{- if isEnumType $type }}
+export const {{$type.Name}}Schema = z.nativeEnum({{$type.Name}});
+{{- end -}}
+
+{{- end}}
+{{end}}
+
+{{end}}

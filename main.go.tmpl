@@ -6,6 +6,7 @@
 {{- set $opts "server" (ternary (in .Opts.server "" "true") true false) -}}
 {{- set $opts "webrpcHeader" (ternary (eq (default .Opts.webrpcHeader "true") "false") false true) -}}
 {{- set $opts "tqk" (ternary (in .Opts.tqk "" "true") true false) -}}
+{{- set $opts "zod" (ternary (in .Opts.zod "" "true") true false) -}}
 
 {{- /* Print help on -help. */ -}}
 {{- if exists .Opts "help" -}}
@@ -133,7 +134,7 @@ function parseWebrpcGenVersions(header: string): WebrpcGenVersions {
 {{template "types" dict "Types" .Types "Services" .Services "TypeMap" $typeMap}}
 
 {{- if $opts.client}}
-  {{template "client" dict "Services" .Services "Opts" $opts "TypeMap" $typeMap}}
+  {{template "client" dict "Services" .Services "Opts" $opts "TypeMap" $typeMap "Types" .Types}}
 
   {{template "clientHelpers" dict "WebrpcErrors" .WebrpcErrors "SchemaErrors" .Errors "Opts" $opts }}
 {{- end}}

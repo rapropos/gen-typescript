@@ -1,6 +1,7 @@
 {{define "client"}}
 
 {{- $typeMap := .TypeMap -}}
+{{- $types := .Types -}}
 {{- $opts := .Opts -}}
 
 {{- if .Services}}
@@ -81,6 +82,11 @@ export class {{.Name}} implements {{.Name}} {
 {{template "tqk" dict
   "Services" .Services
   "TypeMap" .TypeMap
+}}
+{{end}}
+{{if $opts.zod}}
+{{template "zod" dict
+    "Types" .Types
 }}
 {{end}}
 {{- end -}}

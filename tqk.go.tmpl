@@ -6,8 +6,20 @@
 {{- if $services}}
 
 /** TQK **/
-import {GLOBAL_MOTHERSHIP} from "../main.tsx";
-import {queryOptions} from "@tanstack/react-query";
+import {queryOptions, Query, DefaultError} from "@tanstack/react-query";
+
+export type VerbedQueryKey = [string, ...unknown[]];
+
+export interface TqCacheUpdate<T> {
+	query: Query<T, DefaultError, T, VerbedQueryKey>;
+	data: T | undefined;
+	dataUpdatedAt?: number;
+	manual?: boolean;
+}
+
+export type TqCacheListener<T> = (event: TqCacheUpdate<T>) => void;
+
+export type TqCacheSpyEntry<T> = [string, TqCacheListener<T>];
 
 {{range $_, $service := $services }}
 {{ $tqkDone := dict }}
@@ -46,17 +58,19 @@ export const {{$tsbn}}Tqk = [{{$tsbn}}Verb];
 
 {{- $tsmn := firstLetterToLower $method.Name}}
 {{ if gt (len $method.Inputs) 0 }}
-export function {{$tsmn}}Tqo(args: {{$method.Name}}Args) {
+export function {{$tsmn}}Tqo(mama: {{$service.Name}}, args: {{$method.Name}}Args) {
     return queryOptions({
         queryKey: {{$tsbn}}Tqk(args),
-        queryFn: () => GLOBAL_MOTHERSHIP.{{$tsmn}}(args),
+        queryFn: () => mama.{{$tsmn}}(args){{if eq (len $method.Outputs) 1}}.then(rpc => rpc.{{(index $method.Outputs 0).Name}}){{end}},
     });
 }
 {{- else -}}
-export const {{$tsmn}}Tqo = queryOptions({
-    queryKey: {{$tsbn}}Tqk,
-    queryFn: () => GLOBAL_MOTHERSHIP.{{$tsmn}}(),
-});
+export function {{$tsmn}}Tqo(mama: {{$service.Name}}) {
+    return queryOptions({
+        queryKey: {{$tsbn}}Tqk,
+        queryFn: () => mama.{{$tsmn}}(){{if eq (len $method.Outputs) 1}}.then(rpc => rpc.{{(index $method.Outputs 0).Name}}){{end}},
+    });
+}
 {{ end }}
 {{- end }}
 {{- end }}
@@ -80,6 +94,12 @@ import {QueryKey} from "@tanstack/query-core";
 
 export function isSetlistTqkSingle(tqk: QueryKey) {
 	return setlistVerbMultiplicities.get(tqk[0] as string) === "single";
+}
+
+export interface TqCacheSpySet {
+{{- range $verb, $method := $watchers }}
+    {{$verb}}?: TqCacheListener<Exclude<ReturnType<Exclude<ReturnType<typeof {{firstLetterToLower $method.Name}}Tqo>["queryFn"], undefined>>, Promise<any>>>;
+{{- end}}
 }
 
 {{- end }}
