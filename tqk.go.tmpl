@@ -2,11 +2,13 @@
 
 {{- $services := .Services -}}
 {{- $typeMap := .TypeMap -}}
+{{- $types := .Types -}}
 
 {{- if $services}}
 
 /** TQK **/
-import {queryOptions, Query, DefaultError, QueryClient} from "@tanstack/react-query";
+import {queryOptions, Query, DefaultError, QueryClient, QueryObserverResult, useQuery, useQueries, UseQueryResult} from "@tanstack/react-query";
+import {useMothership} from "./mama";
 
 export type VerbedQueryKey = [string, ...unknown[]];
 
@@ -21,13 +23,46 @@ export type TqCacheListener<T> = (event: TqCacheUpdate<T>) => void;
 
 export type TqCacheSpyEntry<T> = [string, TqCacheListener<T>];
 
+export const TQDEADBEEF = "DEADBEEF";
+
+// this always gives data back as an array as large as the number of queries passed
+// everything that has not settled will have undefined in its slot in the data array
+// status and error are laid out in parallel
+export function mergeUseQueriesWithInfill<T, TError>(tqrvs: UseQueryResult<T, TError>[]) {
+    const data: (T | undefined)[] = [];
+    const statusen: QueryObserverResult["status"][] = [];
+    const errors: (TError | null)[] = [];
+
+    tqrvs.forEach((tqrv, ix) => {
+        data[ix] = tqrv.data;
+        statusen[ix] = tqrv.status;
+        errors[ix] = tqrv.error;
+    });
+
+    const isSuccess = statusen.every(maybe => maybe === "success");
+    const isError = !!statusen.find(maybe => maybe === "error");
+    const isPending = statusen.find(maybe => maybe === "pending");
+    const status =
+		isError ? "error"
+    : isPending ? "pending"
+    : isSuccess ? "success"
+	            : "error";
+
+    return {data, statusen, errors, isSuccess, isError, isPending, status};
+}
+
 {{range $_, $service := $services }}
 {{ $tqkDone := dict }}
 {{ $watchers := dict }}
+{{ $methodMap := dict }}
+
+{{range $_, $method := $service.Methods}}
+{{ set $methodMap $method.Name $method }}
+{{ end }}
 
 {{range $_, $method := $service.Methods}}
 {{- if hasPrefix $method.Name "Watch"}}
-{{- set $watchers (trimPrefix $method.Name "Watch") $method }}
+{{ set $watchers (trimPrefix $method.Name "Watch") $method }}
 {{- end }}
 
 {{- if or (hasPrefix $method.Name "Ignore") $method.StreamOutput }}{{else}}
@@ -35,6 +70,12 @@ export type TqCacheSpyEntry<T> = [string, TqCacheListener<T>];
 (ternary (hasPrefix $method.Name "Peek") (trimPrefix $method.Name "Peek") $method.Name)
 }}
 {{- $tsbn := firstLetterToLower $baseName}}
+{{- $tsmn := firstLetterToLower $method.Name}}
+{{- $watchReturn := nil }}
+{{- if gt (len $method.Outputs) 0}}{{$watchReturn = index $method.Outputs 0}}{{end}}}
+{{- $watchReturnUncertain := ternary $watchReturn $watchReturn.Optional nil }}
+{{- $lastValidBackupMn := print "lastValid" $tsbn }}
+{{- $lastValidBackupExists := hasKey $methodMap $lastValidBackupMn}}
 {{- if hasKey $tqkDone $baseName }}{{else}}
 
 export const {{$tsbn}}Verb = "{{$baseName}}";
@@ -55,27 +96,85 @@ export const {{$tsbn}}Tqk = [{{$tsbn}}Verb];
 {{- end }}
 
 {{- $tsmn := firstLetterToLower $method.Name}}
-{{ if gt (len $method.Inputs) 0 }}
-export function ensure{{$baseName}}(tqc: QueryClient, mama: KingBasuraService, args: {{$method.Name}}Args) {
+{{- if gt (len $method.Inputs) 0 }}
+
+export function ensure{{$baseName}}({tqc, mama, args}: {tqc: QueryClient, mama: KingBasuraService, args: {{$method.Name}}Args}) {
     return tqc.ensureQueryData({
         queryKey: {{$tsbn}}Tqk(args),
-        queryFn: () => mama.{{$tsmn}}(args){{if eq (len $method.Outputs) 1}}.then(rpc => rpc.{{(index $method.Outputs 0).Name}}){{end}},
+        queryFn: () => mama.{{$tsmn}}(args){{if eq (len $method.Outputs) 1}}
+		    .then(rpc =>
+				{{- if and $watchReturnUncertain $lastValidBackupExists}} {
+					return rpc.{{$watchReturn}} ?? mama.{{$lastValidBackupMn}}
+					    .then(lvrpc => lvrpc.{{$watchReturn.Name}});
+                }
+				{{- else}}rpc.{{$watchReturn.Name}}{{end}})
     });
 }
-{{- else -}}
-export function ensure{{$baseName}}(tqc: QueryClient, mama: KingBasuraService) {
+
+{{else}}
+
+export function ensure{{$baseName}}({tqc, mama} : {tqc: QueryClient, mama: KingBasuraService}) {
     return tqc.ensureQueryData({
         queryKey: {{$tsbn}}Tqk,
         queryFn: () => mama.{{$tsmn}}(){{if eq (len $method.Outputs) 1}}.then(rpc => rpc.{{(index $method.Outputs 0).Name}}){{end}},
     });
 }
+
+{{ end -}}
+
+{{- if gt (len $method.Outputs) 0}}
+{{- $outTypeName := (index $method.Outputs 0).Type.Expr }}
+{{- $isSlice := hasPrefix $outTypeName "[]"}}
+{{- $isStub := hasSuffix $outTypeName "Stub"}}
+{{- $outTypeBaseName := trimSuffix (trimPrefix $outTypeName "[]") "Stub" }}
+{{- $ribFetchFieldName := firstLetterToLower $outTypeBaseName }}
+{{- $minusWatchMethodName := trimPrefix $method.Name "Watch"}}
+{{- $byIdEnsurerFnm := print "ensure" $outTypeBaseName "ById"}}
+{{- $byIdFetcherFnm := print "watch" $outTypeBaseName "ById"}}
+{{- $hasArgs := gt (len $method.Inputs) 0}}
+
+{{- if $isStub}}
+{{- if hasKey $methodMap (firstLetterToUpper $byIdFetcherFnm)}}
+export function ensureFull{{$minusWatchMethodName}}({tqc, mama{{if $hasArgs}}, args{{end}}}: {tqc: QueryClient, mama: {{$service.Name}}{{if $hasArgs}}, args: {{$method.Name}}Args{{end}}}) {
+	return ensure{{$minusWatchMethodName}}({tqc, mama{{if $hasArgs}}, args{{end}}})
+	{{- if $isSlice}}
+	    .then(stubs => Promise.all(stubs.map(stub => {{$byIdEnsurerFnm}}({tqc, mama, args: { {{- $ribFetchFieldName}}Id: stub.id}}))));
+    {{- else}}
+    {{- if (index $method.Outputs 0).Optional}}
+	    .then(stub => stub ? {{$byIdEnsurerFnm}}({tqc, mama, args: { {{- $ribFetchFieldName}}Id: stub.id}}) : undefined);
+    {{- else}}
+	    .then(stub => {{$byIdEnsurerFnm}}({tqc, mama, args: { {{- $ribFetchFieldName}}Id: stub.id}}));
+    {{- end}}
+    {{- end}}
+}
+
+export function use{{$method.Name}}({{if $hasArgs}}args: {{$method.Name}}Args{{end}}) {
+    const mama = useMothership();
+	{{- if $isSlice}}
+    const {data: stubs} = useQuery({{$tsmn}}Tqo(mama{{if $hasArgs}}, args{{end}}));
+    return useQueries({
+        queries: (stubs ?? []).map(stub =>
+            {{$byIdFetcherFnm}}Tqo(mama, { {{$ribFetchFieldName}}Id: stub.id})),
+        combine: mergeUseQueriesWithInfill,
+    });
+	{{- else}}
+	const {data: stub} = useQuery({{$tsmn}}Tqo(mama{{if $hasArgs}}, args{{end}}));
+	const id = stub?.id ?? TQDEADBEEF;
+	return useQuery({
+        ...{{$byIdFetcherFnm}}Tqo(mama, { {{$ribFetchFieldName}}Id: id}),
+		enabled: id !== TQDEADBEEF
+    });
+	{{- end}}
+}
+
+{{- else }}
+// WARNING: no method {{$byIdFetcherFnm}}
+{{- end }}
 {{- end }}
 
-{{- set $tqkDone $baseName true}}
-{{- end }}
-
-
-{{- $tsmn := firstLetterToLower $method.Name}}
+{{- end}}
+{{ set $tqkDone $baseName true}}
+{{- end}}
 {{ if gt (len $method.Inputs) 0 }}
 export function {{$tsmn}}Tqo(mama: {{$service.Name}}, args: {{$method.Name}}Args) {
     return queryOptions({
