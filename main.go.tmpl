@@ -5,7 +5,7 @@
 {{- set $opts "client" (ternary (in .Opts.client "" "true") true false) -}}
 {{- set $opts "server" (ternary (in .Opts.server "" "true") true false) -}}
 {{- set $opts "webrpcHeader" (ternary (eq (default .Opts.webrpcHeader "true") "false") false true) -}}
-{{- set $opts "tqk" (ternary (in .Opts.tqk "" "true") true false) -}}
+{{- set $opts "tq" (ternary (in .Opts.tq "" "true") true false) -}}
 {{- set $opts "zod" (ternary (in .Opts.zod "" "true") true false) -}}
 
 {{- /* Print help on -help. */ -}}

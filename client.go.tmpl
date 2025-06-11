@@ -78,10 +78,11 @@ export class {{.Name}} implements {{.Name}} {
 {{if $opts.streaming}}
   {{template "sse"}}
 {{end}}
-{{if $opts.tqk}}
-{{template "tqk" dict
+{{if $opts.tq}}
+{{template "tq" dict
   "Services" .Services
   "TypeMap" .TypeMap
+  "Types" .Types
 }}
 {{end}}
 {{if $opts.zod}}

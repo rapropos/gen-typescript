@@ -1,0 +1,157 @@
+{{define "tq"}}
+
+{{- $services := .Services }}
+{{- $typeMap := .TypeMap }}
+{{- $types := .Types }}
+
+{{- if $services}}
+
+/** TQK **/
+import {queryOptions, Query, DefaultError, QueryClient, QueryKey,
+	QueryObserverResult, useQuery, useQueries, UseQueryResult, skipToken} from "@tanstack/react-query";
+import {useMothership} from "./mama";
+
+export type VerbedQueryKey = [string, ...unknown[]];
+
+export interface TqCacheUpdate<T> {
+	query: Query<T, DefaultError, T, VerbedQueryKey>;
+	data: T | undefined;
+	dataUpdatedAt?: number;
+	manual?: boolean;
+}
+
+export type TqCacheListener<T> = (event: TqCacheUpdate<T>) => void;
+
+export type TqCacheSpyEntry<T> = [string, TqCacheListener<T>];
+
+const TQDEADBEEF = "TQDEADBEEF";
+
+const TQDEADBEEF_KEY = [TQDEADBEEF];
+
+export const DEADBEEF_QUERY_OPTS = queryOptions({
+    queryKey: TQDEADBEEF_KEY,
+    queryFn: skipToken,
+    initialData: TQDEADBEEF,
+});
+
+// this always gives data back as an array as large as the number of queries passed
+// everything that has not settled will have undefined in its slot in the data array
+// status and error are laid out in parallel
+export function mergeUseQueriesWithInfill<T, TError>(tqrvs: UseQueryResult<T, TError>[]) {
+    const data: (T | undefined)[] = [];
+    const statusen: QueryObserverResult["status"][] = [];
+    const errors: (TError | null)[] = [];
+
+    tqrvs.forEach((tqrv, ix) => {
+        data[ix] = tqrv.data;
+        statusen[ix] = tqrv.status;
+        errors[ix] = tqrv.error;
+    });
+
+    const isSuccess = statusen.every(maybe => maybe === "success");
+    const isError = !!statusen.find(maybe => maybe === "error");
+    const isPending = statusen.find(maybe => maybe === "pending");
+    const status =
+		isError ? "error"
+    : isPending ? "pending"
+    : isSuccess ? "success"
+	            : "error";
+
+    return {data, statusen, errors, isSuccess, isError, isPending, status};
+}
+
+{{- range $_, $service := $services }}
+{{- $tqkDone := dict }}
+{{- $watchers := dict }}
+{{- $methodMap := dict }}
+
+{{- range $_, $method := $service.Methods}}
+{{-     set $methodMap $method.Name $method }}
+{{- end }}
+
+{{- range $_, $method := $service.Methods}}
+// TQMLOOPTOP
+{{- if hasPrefix $method.Name "Watch"}}
+{{-     set $watchers (trimPrefix $method.Name "Watch") $method }}
+{{- end }}
+
+{{- if or (hasPrefix $method.Name "Ignore") $method.StreamOutput }}{{else}}
+{{- $baseName := ternary (hasPrefix $method.Name "Watch") (trimPrefix $method.Name "Watch")
+(ternary (hasPrefix $method.Name "Peek") (trimPrefix $method.Name "Peek") $method.Name)
+}}
+{{- $tsbn := firstLetterToLower $baseName}}
+{{- $tsmn := firstLetterToLower $method.Name}}
+
+{{- $hasInput := gt (len $method.Inputs) 0}}
+
+{{- $out := false }}
+{{- $outTypeName := false }}
+{{- $isOutSlice := false }}
+{{- $isOutStub := false }}
+{{- $isOutUncertain := false }}
+{{- $outTypeBaseName := false }}
+{{- $ribFetchFieldName := false }}
+
+{{- $hasOutput := gt (len $method.Outputs) 0}}
+{{- if $hasOutput }}
+{{-     $out = index $method.Outputs 0}}
+{{-     $outTypeName = $out.Type.Expr }}
+{{-     $isOutSlice = hasPrefix $outTypeName "[]"}}
+{{-     $isOutStub = hasSuffix $outTypeName "Stub"}}
+{{-     $isOutUncertain = $out.Optional }}
+{{-     $outTypeBaseName = trimSuffix (trimPrefix $outTypeName "[]") "Stub" }}
+{{-     $ribFetchFieldName = firstLetterToLower $outTypeBaseName }}
+{{- end }}
+
+{{- $lastValidBackupMn := print "LastValid" $baseName }}
+{{- $lastValidBackupExists := hasKey $methodMap $lastValidBackupMn}}
+{{- $minusWatchMethodName := trimPrefix $method.Name "Watch"}}
+{{- $byIdEnsurerFnm := print "ensure" $outTypeBaseName "ById"}}
+{{- $byIdFetcherFnm := print "watch" $outTypeBaseName "ById"}}
+
+{{- if hasKey $tqkDone $baseName }}{{- else}}
+{{- template "tqk" dict
+    "watchMethod" $method
+    "MethodMap" $methodMap
+    "TypeMap" $typeMap }}
+{{- template "tqp" dict
+    "service" $service
+    "watchMethod" $method
+    "MethodMap" $methodMap
+    "TypeMap" $typeMap }}
+{{- set $tqkDone $baseName true}}
+{{- end}}
+{{- template "tqo" dict
+    "watchMethod" $method
+    "MethodMap" $methodMap }}
+{{- end }}
+// TQMLOOPEND
+{{- end }}{{/* method loop */}}
+// it's necessary to know whether a setlist is single or multiple,
+// because you cannot rely on whether the existing cache entry is an
+// array or not. in the case where we subscribe to a list that is
+// empty at the time of subscription, we have to know whether
+// to fill it with an empty array or with null.
+
+type Multiplicity = "single" | "multi";
+
+const setlistVerbMultiplicities = new Map<string, Multiplicity>([
+{{- range $verb, $method := $watchers }}
+{{- $methrv := index $method.Outputs 0}}
+    ["{{$verb}}", "{{ternary (eq $methrv.Type.Type.String "[]") "multi" "single"}}"],
+{{- end }}
+]);
+
+export function isSetlistTqkSingle(tqk: QueryKey) {
+	return setlistVerbMultiplicities.get(tqk[0] as string) === "single";
+}
+
+export interface TqCacheSpySet {
+{{- range $verb, $method := $watchers }}
+    {{$verb}}?: TqCacheListener<Awaited<ReturnType<typeof {{print "ensure" (trimPrefix $method.Name "Watch")}}>>>;
+{{- end}}
+}
+
+{{- end }}{{/* service loop */}}
+{{- end }}
+{{- end }}
