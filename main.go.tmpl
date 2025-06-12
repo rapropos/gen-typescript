@@ -131,7 +131,11 @@ function parseWebrpcGenVersions(header: string): WebrpcGenVersions {
   };
 }
 
-{{template "types" dict "Types" .Types "Services" .Services "TypeMap" $typeMap}}
+{{- if $opts.zod}}
+  {{- template "zod" dict "Types" .Types "Services" .Services "TypeMap" $typeMap}}
+{{- else }}
+  {{- template "types" dict "Types" .Types "Services" .Services "TypeMap" $typeMap}}
+{{- end}}
 
 {{- if $opts.client}}
   {{template "client" dict "Services" .Services "Opts" $opts "TypeMap" $typeMap "Types" .Types}}

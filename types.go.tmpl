@@ -42,27 +42,7 @@ export interface {{$type.Name}} {
 
 {{if $services}}
 {{- range $_, $service := $services}}
-export interface {{$service.Name}} {
-{{- range $_, $method := $service.Methods}}
-  {{- $deprecated := index $method.Annotations "deprecated" -}}
-  {{- if gt (len $method.Comments) 0 }}
-  /**
-    {{- range $_, $comment := $method.Comments }}
-   * {{ replaceAll $comment "\"" "'" }}
-    {{- end }}
-    {{- if $deprecated }}
-   *
-   * @deprecated {{ $deprecated.Value }}
-    {{- end }}
-   */
-  {{- else if $deprecated }}
-  /**
-   * @deprecated {{ $deprecated.Value }}
-   */
-  {{- end }}
-  {{firstLetterToLower $method.Name}}({{template "methodInputs" dict "Method" $method "TypeMap" $typeMap}}): {{if $method.StreamOutput}}WebrpcStreamController{{else}}Promise<{{$method.Name}}Return>{{end}}
-{{- end}}
-}
+{{ template "serviceInterface" dict "Service" $service }}
 
 {{range $_, $method := $service.Methods -}}
 export interface {{$method.Name}}Args {

@@ -85,9 +85,4 @@ export class {{.Name}} implements {{.Name}} {
   "Types" .Types
 }}
 {{end}}
-{{if $opts.zod}}
-{{template "zod" dict
-    "Types" .Types
-}}
-{{end}}
 {{- end -}}

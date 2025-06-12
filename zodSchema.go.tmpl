@@ -1,0 +1,51 @@
+{{ define "zodSchema" }}
+
+{{ $type := .Type }}
+{{ $todoTypes := .TodoTypes }}
+{{ $typeMap := .TypeMap }}
+
+{{- if hasKey $todoTypes $type.Name }}
+    {{- if isEnumType $type }}
+
+export const {{$type.Name}}Schema = z.enum([
+        {{- range $i, $field := $type.Fields}}
+    "{{$field.Name}}",
+        {{- end}}
+]);
+export type {{$type.Name}} = z.infer<typeof {{$type.Name}}Schema>;
+    {{- end }}
+
+    {{- if isStructType $type }}
+
+	    {{- /* ensure referenced types are defined first */}}
+        {{- range $_, $field := $type.Fields }}
+		    {{ $fbt := trimPrefix $field.Type.Expr "[]"}}
+            {{- if hasKey $todoTypes $fbt }}
+			// prioritizing {{$fbt}} needed for {{$type.Name}}
+	            {{- template "zodSchema" dict "Type" (get $todoTypes $fbt) "TodoTypes" $todoTypes "TypeMap" $typeMap }}
+	        {{- end }}
+        {{- end }}
+
+export const {{$type.Name}}Schema = z.object({
+        {{- range $_, $field := $type.Fields}}
+            {{- $isExportable := true }}
+            {{- range $meta := $field.Meta }}
+                {{- if exists $meta "json" }}
+                    {{- if eq (printf "%v" (get $meta "json")) "-" }}
+                        {{- $isExportable = false}}
+                    {{- end }}
+                {{- end }}
+            {{- end }}
+
+            {{- if $isExportable }}
+                {{template "fieldName" dict "Field" .}}: {{if .Optional}}z.optional({{end}}{{template "zodType" dict "Type" $field.Type "TypeMap" $typeMap}}{{if .Optional}}){{end}},
+            {{- end }}
+        {{- end}}
+});
+export type {{$type.Name}} = z.infer<typeof {{$type.Name}}Schema>;
+    {{- end }}
+
+	{{ $_ :=unset $todoTypes $type.Name }}
+{{- end }}
+
+{{- end }}

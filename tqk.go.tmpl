@@ -13,12 +13,9 @@ export const {{$tsbn}}Verb = "{{$baseName}}";
 
 {{- if $hasInput }}
 
-export interface {{$baseName}}Args {
-{{-     range $i, $input := $watchMethod.Inputs }}
-    {{ template "fieldName" dict "Field" $input }}
-    {{- if $input.Optional}}?{{end}}: {{template "type" dict "Type" $input.Type "TypeMap" $typeMap}};
-{{- end }}
-}
+    {{- if ne $baseName $watchMethod.Name }}
+export type {{$baseName}}Args = Watch{{$baseName}}Args;
+    {{- end }}
 
 export function {{$tsbn}}Tqk(args?: {{$baseName}}Args) {
     return args ? [{{$tsbn}}Verb, args] as const : [{{$tsbn}}Verb] as const;

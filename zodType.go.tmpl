@@ -1,0 +1,20 @@
+{{ define "zodType" }}
+{{- $type := .Type }}
+{{- $typeMap := .TypeMap }}
+
+{{- if $type }}
+    {{- if isMapType $type }}
+
+// TODO map
+z.any()
+
+    {{- else if isListType $type -}}
+{{ template "zodType" dict "Type" $type.List.Elem "TypeMap" $typeMap }}.array()
+    {{- else if hasKey $typeMap $type.Expr -}}
+{{ get $typeMap $type.Expr -}}
+    {{- else -}}
+{{ $type.Expr }}Schema
+    {{- end }}
+{{- end }}
+
+{{- end }}
