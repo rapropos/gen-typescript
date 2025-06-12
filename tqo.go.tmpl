@@ -60,21 +60,39 @@ export function {{$tsbn}}Tqo(mama: {{$serviceName}}, args?: {{$baseName}}Args) {
 
 export function use{{$baseName}}(args?: {{$baseName}}Args) {
     const mama = useMothership();
-	return useQuery({{$tsbn}}Tqo(mama, args));
+	return useRefreshableQuery({{$tsbn}}Tqo(mama, args));
 }
 
 export function useFull{{$baseName}}(args?: {{$baseName}}Args) {
     const mama = useMothership();
 	const {data: stubs} = use{{$baseName}}(args);
-	return useQueries({
-        queries: (stubs ?? []).map(stub => {
-            const ribArgs = {
-                {{- $ribFetchFieldName}}Id: stub.id} as const;
-            return {
-                queryKey: {{$ribFetchFieldName}}ByIdTqk(ribArgs),
-                queryFn: () => {{template "tqfn" dict "watchMethod" $byIdWatcherMethod "MethodMap" $methodMap "argsVarName" "ribArgs"}},
-            };
-        }),
+
+	const qos = (stubs ?? []).map(stub => {
+        const ribArgs = {
+            {{- $ribFetchFieldName}}Id: stub.id} as const;
+        return {
+            queryKey: {{$ribFetchFieldName}}ByIdTqk(ribArgs),
+            queryFn: () => {{template "tqfn" dict "watchMethod" $byIdWatcherMethod "MethodMap" $methodMap "argsVarName" "ribArgs"}},
+        } as const;
+    });
+
+    const refreshManager = useRefreshSet();
+    const qks = qos.map(qo => qo.queryKey);
+    const [watchingQks, setWatchingQks] = useState<QueryKey[]>([]);
+    useEffect(() => {
+        if (!isDeepEqual(qks, watchingQks)) {
+            watchingQks.forEach(qk => {
+                refreshManager.unregister(qk)
+            });
+            qks.forEach(qk => {
+                refreshManager.register(qk);
+            });
+            setWatchingQks(qks);
+        }
+    }, [qks, refreshManager, watchingQks]);
+
+    return useQueries({
+        queries: qos,
         combine: mergeUseQueriesWithInfill,
     });
 }
@@ -95,16 +113,34 @@ export function use{{$baseName}}() {
 export function useFull{{$baseName}}() {
     const mama = useMothership();
 	const {data: stubs} = use{{$baseName}}();
-	return useQueries({
-        queries: (stubs ?? []).map(stub => {
-            const ribArgs = {
-                {{- $ribFetchFieldName}}Id: stub.id} as const;
-            return {
-                queryKey: {{$ribFetchFieldName}}ByIdTqk(ribArgs),
-				queryFn: () => {{template "tqfn" dict "watchMethod" $byIdWatcherMethod "MethodMap" $methodMap "argsVarName" "ribArgs"}},
-            };
-		}),
-		combine: mergeUseQueriesWithInfill,
+
+	const qos = (stubs ?? []).map(stub => {
+        const ribArgs = {
+            {{- $ribFetchFieldName}}Id: stub.id} as const;
+        return {
+            queryKey: {{$ribFetchFieldName}}ByIdTqk(ribArgs),
+            queryFn: () => {{template "tqfn" dict "watchMethod" $byIdWatcherMethod "MethodMap" $methodMap "argsVarName" "ribArgs"}},
+        } as const;
+    });
+
+    const refreshManager = useRefreshSet();
+    const qks = qos.map(qo => qo.queryKey);
+    const [watchingQks, setWatchingQks] = useState<QueryKey[]>([]);
+    useEffect(() => {
+        if (!isDeepEqual(qks, watchingQks)) {
+            watchingQks.forEach(qk => {
+                refreshManager.unregister(qk)
+            });
+            qks.forEach(qk => {
+                refreshManager.register(qk);
+            });
+            setWatchingQks(qks);
+        }
+    }, [qks, refreshManager, watchingQks]);
+
+    return useQueries({
+        queries: qos,
+        combine: mergeUseQueriesWithInfill,
     });
 }
 {{-             end }}
@@ -131,7 +167,7 @@ export function useFull{{$baseName}}(args ?: {{$baseName}}Args) {
     const {data: stub} = use{{$baseName}}(args);
 	const ribArgs = stub ? { {{$ribFetchFieldName}}Id: stub.id } as const : undefined;
 
-	return useQuery({
+	return useRefreshableQuery({
 		queryKey: {{$ribFetchFieldName}}ByIdTqk(ribArgs),
 		queryFn: ribArgs
             ? () => {{ template "tqfn" dict "watchMethod" $byIdWatcherMethod "MethodMap" $methodMap "argsVarName" "ribArgs" }}
@@ -149,7 +185,7 @@ export function {{$tsbn}}Tqo(mama: {{$serviceName}}) {
 
 export function use{{$baseName}}() {
     const mama = useMothership();
-	return useQuery({{$tsbn}}Tqo());
+	return useRefreshableQuery({{$tsbn}}Tqo());
 }
 
 export function useFull{{$baseName}}() {
@@ -157,7 +193,7 @@ export function useFull{{$baseName}}() {
     const {data: stub} = use{{$baseName}}();
 
     const ribArgs = stub ? { {{$ribFetchFieldName}}Id: stub.id } as const : undefined;
-    return useQuery({
+    return useRefreshableQuery({
         queryKey: {{$ribFetchFieldName}}ByIdTqk(ribArgs),
         queryFn: ribArgs
 		    ? () => {{ template "tqfn" dict "watchMethod" $byIdWatcherMethod "MethodMap" $methodMap "argsVarName" "ribArgs" }}
@@ -182,7 +218,7 @@ export function {{$tsbn}}Tqo(mama: {{$serviceName}}, args ?: {{$baseName}}Args) 
 
 export function use{{$baseName}}(args ?: {{$baseName}}Args) {
 	const mama = useMothership();
-	return useQuery({{$tsbn}}Tqo(mama, args));
+	return useRefreshableQuery({{$tsbn}}Tqo(mama, args));
 }
 {{-    else }}
 // {{$baseName}} takes no args
@@ -195,7 +231,7 @@ export function {{$tsbn}}Tqo(mama: {{$serviceName}}) {
 
 export function use{{$baseName}}() {
     const mama = useMothership();
-    return useQuery({{$tsbn}}Tqo(mama));
+    return useRefreshableQuery({{$tsbn}}Tqo(mama));
 }
 {{-    end }}
 {{- end }}
