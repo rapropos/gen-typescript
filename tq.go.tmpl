@@ -123,7 +123,8 @@ export function mergeUseQueriesWithInfill<T, TError>(tqrvs: UseQueryResult<T, TE
 {{- end}}
 {{- template "tqo" dict
     "watchMethod" $method
-    "MethodMap" $methodMap }}
+    "MethodMap" $methodMap
+    "serviceName" $service.Name }}
 {{- end }}
 // TQMLOOPEND
 {{- end }}{{/* method loop */}}

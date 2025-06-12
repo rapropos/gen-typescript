@@ -2,6 +2,7 @@
 // TQOTOP
 {{- $watchMethod := .watchMethod }}
 {{- $methodMap := .MethodMap }}
+{{- $serviceName := .serviceName}}
 
 {{- $baseName := trimPrefix $watchMethod.Name "Watch" }}
 {{- $tsbn := firstLetterToLower $baseName }}
@@ -48,14 +49,18 @@
 // {{$outTypeName}} is a slice
 {{-             if $hasInput }}
 // {{$baseName}} can take arguments
-export function use{{$baseName}}(args?: {{$baseName}}Args) {
-    const mama = useMothership();
-	return useQuery({
+export function {{$tsbn}}Tqo(mama: {{$serviceName}}, args?: {{$baseName}}Args) {
+    return queryOptions({
         queryKey: {{$tsbn}}Tqk(args),
         queryFn: args
             ? () => {{template "tqfn" dict "watchMethod" $watchMethod "MethodMap" $methodMap }}
             : skipToken,
     });
+}
+
+export function use{{$baseName}}(args?: {{$baseName}}Args) {
+    const mama = useMothership();
+	return useQuery({{$tsbn}}Tqo(mama, args));
 }
 
 export function useFull{{$baseName}}(args?: {{$baseName}}Args) {
@@ -75,12 +80,16 @@ export function useFull{{$baseName}}(args?: {{$baseName}}Args) {
 }
 {{-             else }}{{/* no input */}}
 // {{$baseName}} takes no args
-export function use{{$baseName}}() {
-    const mama = useMothership();
-	return useQuery({
+export function {{$tsbn}}Tqo(mama: {{$serviceName}}) {
+    return queryOptions({
         queryKey: {{$tsbn}}Tqk,
         queryFn: () => {{template "tqfn" dict "watchMethod" $watchMethod "MethodMap" $methodMap }},
     });
+}
+
+export function use{{$baseName}}() {
+    const mama = useMothership();
+	return useQuery({{$tsbn}}Tqo(mama));
 }
 
 export function useFull{{$baseName}}() {
@@ -103,14 +112,18 @@ export function useFull{{$baseName}}() {
 // {{$outTypeName}} not a slice
 {{-             if $hasInput}}
 // {{$baseName}} can take args
-export function use{{$baseName}}(args ?: {{$baseName}}Args) {
-    const mama = useMothership();
-    return useQuery({
+export function {{$tsbn}}Tqo(mama: {{$serviceName}}, args ?: {{$baseName}}Args) {
+    return queryOptions({
         queryKey: {{$tsbn}}Tqk(args),
         queryFn: args
-		    ? () => {{template "tqfn" dict "watchMethod" $watchMethod "MethodMap" $methodMap }}
-			: skipToken,
+            ? () => {{template "tqfn" dict "watchMethod" $watchMethod "MethodMap" $methodMap }}
+        : skipToken,
     });
+}
+
+export function use{{$baseName}}(args ?: {{$baseName}}Args) {
+    const mama = useMothership();
+	return useQuery({{$tsbn}}Tqo(mama, args));
 }
 
 export function useFull{{$baseName}}(args ?: {{$baseName}}Args) {
@@ -127,17 +140,21 @@ export function useFull{{$baseName}}(args ?: {{$baseName}}Args) {
 }
 {{-             else }}
 // {{$baseName}} takes no arguments
-export function use{{$baseName}}() {
-    const mama = useMothership();
-    return useQuery({
+export function {{$tsbn}}Tqo(mama: {{$serviceName}}) {
+    return queryOptions({
         queryKey: {{$tsbn}}Tqk,
         queryFn: () => {{template "tqfn" dict "watchMethod" $watchMethod "MethodMap" $methodMap }},
-	});
+    });
+}
+
+export function use{{$baseName}}() {
+    const mama = useMothership();
+	return useQuery({{$tsbn}}Tqo());
 }
 
 export function useFull{{$baseName}}() {
 	const mama = useMothership();
-    const {data: stub} = use{{$tsbn}}();
+    const {data: stub} = use{{$baseName}}();
 
     const ribArgs = stub ? { {{$ribFetchFieldName}}Id: stub.id } as const : undefined;
     return useQuery({
@@ -154,23 +171,31 @@ export function useFull{{$baseName}}() {
 // {{$outTypeBaseName}} is not a stub
 {{-    if $hasInput }}
 // {{$baseName}} can take args
-export function use{{$baseName}}(args ?: {{$baseName}}Args) {
-	const mama = useMothership();
-    return useQuery({
+export function {{$tsbn}}Tqo(mama: {{$serviceName}}, args ?: {{$baseName}}Args) {
+    return queryOptions({
         queryKey: {{$tsbn}}Tqk(args),
         queryFn: args
-		    ? () => {{template "tqfn" dict "watchMethod" $watchMethod "MethodMap" $methodMap }}
-			: skipToken,
+            ? () => {{template "tqfn" dict "watchMethod" $watchMethod "MethodMap" $methodMap }}
+            : skipToken,
     });
+}
+
+export function use{{$baseName}}(args ?: {{$baseName}}Args) {
+	const mama = useMothership();
+	return useQuery({{$tsbn}}Tqo(mama, args));
 }
 {{-    else }}
 // {{$baseName}} takes no args
-export function use{{$baseName}}() {
-    const mama = useMothership();
-    return useQuery({
+export function {{$tsbn}}Tqo(mama: {{$serviceName}}) {
+	return queryOptions({
         queryKey: {{$tsbn}}Tqk,
         queryFn: () => {{template "tqfn" dict "watchMethod" $watchMethod "MethodMap" $methodMap }},
     });
+}
+
+export function use{{$baseName}}() {
+    const mama = useMothership();
+    return useQuery({{$tsbn}}Tqo(mama));
 }
 {{-    end }}
 {{- end }}
