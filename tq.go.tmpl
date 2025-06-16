@@ -52,7 +52,8 @@ export function mergeUseQueriesWithInfill<T, TError>(tqrvs: UseQueryResult<T, TE
     });
 
     const isSuccess = statusen.every(maybe => maybe === "success");
-    const isError = !!statusen.find(maybe => maybe === "error");
+    const firstErrorIx = statusen.findIndex(maybe => maybe === "error");
+    const isError = firstErrorIx >= 0;
     const isPending = statusen.find(maybe => maybe === "pending");
     const status =
 		isError ? "error"
@@ -60,7 +61,8 @@ export function mergeUseQueriesWithInfill<T, TError>(tqrvs: UseQueryResult<T, TE
     : isSuccess ? "success"
 	            : "error";
 
-    return {data, statusen, errors, isSuccess, isError, isPending, status};
+    return {data, statusen, errors, isSuccess, isError, isPending, status,
+        ...(isError ? {error: errors[firstErrorIx]} : {})};
 }
 
 {{- range $_, $service := $services }}

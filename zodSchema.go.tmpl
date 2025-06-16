@@ -42,7 +42,6 @@ export const {{$type.Name}}Schema = z.object({
             {{- end }}
         {{- end}}
 });
-export type {{$type.Name}} = z.infer<typeof {{$type.Name}}Schema>;
     {{- end }}
 
 	{{ $_ :=unset $todoTypes $type.Name }}

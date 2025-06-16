@@ -4,6 +4,7 @@
 {{- $methodMap := .MethodMap }}
 {{- $serviceName := .serviceName}}
 
+{{- $tsmn := firstLetterToLower $watchMethod.Name }}
 {{- $baseName := trimPrefix $watchMethod.Name "Watch" }}
 {{- $tsbn := firstLetterToLower $baseName }}
 
@@ -49,7 +50,7 @@
 // {{$outTypeName}} is a slice
 {{-             if $hasInput }}
 // {{$baseName}} can take arguments
-export function {{$tsbn}}Tqo(mama: {{$serviceName}}, args?: {{$baseName}}Args) {
+export function {{$tsmn}}Tqo(mama: {{$serviceName}}, args?: {{$baseName}}Args) {
     return queryOptions({
         queryKey: {{$tsbn}}Tqk(args),
         queryFn: args
@@ -60,7 +61,7 @@ export function {{$tsbn}}Tqo(mama: {{$serviceName}}, args?: {{$baseName}}Args) {
 
 export function use{{$baseName}}(args?: {{$baseName}}Args) {
     const mama = useMothership();
-	return useRefreshableQuery({{$tsbn}}Tqo(mama, args));
+	return useRefreshableQuery({{$tsmn}}Tqo(mama, args));
 }
 
 export function useFull{{$baseName}}(args?: {{$baseName}}Args) {
@@ -98,7 +99,7 @@ export function useFull{{$baseName}}(args?: {{$baseName}}Args) {
 }
 {{-             else }}{{/* no input */}}
 // {{$baseName}} takes no args
-export function {{$tsbn}}Tqo(mama: {{$serviceName}}) {
+export function {{$tsmn}}Tqo(mama: {{$serviceName}}) {
     return queryOptions({
         queryKey: {{$tsbn}}Tqk,
         queryFn: () => {{template "tqfn" dict "watchMethod" $watchMethod "MethodMap" $methodMap }},
@@ -107,7 +108,7 @@ export function {{$tsbn}}Tqo(mama: {{$serviceName}}) {
 
 export function use{{$baseName}}() {
     const mama = useMothership();
-	return useQuery({{$tsbn}}Tqo(mama));
+	return useQuery({{$tsmn}}Tqo(mama));
 }
 
 export function useFull{{$baseName}}() {
@@ -148,7 +149,7 @@ export function useFull{{$baseName}}() {
 // {{$outTypeName}} not a slice
 {{-             if $hasInput}}
 // {{$baseName}} can take args
-export function {{$tsbn}}Tqo(mama: {{$serviceName}}, args ?: {{$baseName}}Args) {
+export function {{$tsmn}}Tqo(mama: {{$serviceName}}, args ?: {{$baseName}}Args) {
     return queryOptions({
         queryKey: {{$tsbn}}Tqk(args),
         queryFn: args
@@ -159,7 +160,7 @@ export function {{$tsbn}}Tqo(mama: {{$serviceName}}, args ?: {{$baseName}}Args) 
 
 export function use{{$baseName}}(args ?: {{$baseName}}Args) {
     const mama = useMothership();
-	return useQuery({{$tsbn}}Tqo(mama, args));
+	return useQuery({{$tsmn}}Tqo(mama, args));
 }
 
 export function useFull{{$baseName}}(args ?: {{$baseName}}Args) {
@@ -176,7 +177,7 @@ export function useFull{{$baseName}}(args ?: {{$baseName}}Args) {
 }
 {{-             else }}
 // {{$baseName}} takes no arguments
-export function {{$tsbn}}Tqo(mama: {{$serviceName}}) {
+export function {{$tsmn}}Tqo(mama: {{$serviceName}}) {
     return queryOptions({
         queryKey: {{$tsbn}}Tqk,
         queryFn: () => {{template "tqfn" dict "watchMethod" $watchMethod "MethodMap" $methodMap }},
@@ -185,7 +186,7 @@ export function {{$tsbn}}Tqo(mama: {{$serviceName}}) {
 
 export function use{{$baseName}}() {
     const mama = useMothership();
-	return useRefreshableQuery({{$tsbn}}Tqo());
+	return useRefreshableQuery({{$tsmn}}Tqo());
 }
 
 export function useFull{{$baseName}}() {
@@ -207,7 +208,7 @@ export function useFull{{$baseName}}() {
 // {{$outTypeBaseName}} is not a stub
 {{-    if $hasInput }}
 // {{$baseName}} can take args
-export function {{$tsbn}}Tqo(mama: {{$serviceName}}, args ?: {{$baseName}}Args) {
+export function {{$tsmn}}Tqo(mama: {{$serviceName}}, args ?: {{$baseName}}Args) {
     return queryOptions({
         queryKey: {{$tsbn}}Tqk(args),
         queryFn: args
@@ -218,11 +219,11 @@ export function {{$tsbn}}Tqo(mama: {{$serviceName}}, args ?: {{$baseName}}Args) 
 
 export function use{{$baseName}}(args ?: {{$baseName}}Args) {
 	const mama = useMothership();
-	return useRefreshableQuery({{$tsbn}}Tqo(mama, args));
+	return useRefreshableQuery({{$tsmn}}Tqo(mama, args));
 }
 {{-    else }}
 // {{$baseName}} takes no args
-export function {{$tsbn}}Tqo(mama: {{$serviceName}}) {
+export function {{$tsmn}}Tqo(mama: {{$serviceName}}) {
 	return queryOptions({
         queryKey: {{$tsbn}}Tqk,
         queryFn: () => {{template "tqfn" dict "watchMethod" $watchMethod "MethodMap" $methodMap }},
@@ -231,7 +232,7 @@ export function {{$tsbn}}Tqo(mama: {{$serviceName}}) {
 
 export function use{{$baseName}}() {
     const mama = useMothership();
-    return useRefreshableQuery({{$tsbn}}Tqo(mama));
+    return useRefreshableQuery({{$tsmn}}Tqo(mama));
 }
 {{-    end }}
 {{- end }}

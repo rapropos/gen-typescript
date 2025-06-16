@@ -7,6 +7,10 @@
 {{- set $opts "webrpcHeader" (ternary (eq (default .Opts.webrpcHeader "true") "false") false true) -}}
 {{- set $opts "tq" (ternary (in .Opts.tq "" "true") true false) -}}
 {{- set $opts "zod" (ternary (in .Opts.zod "" "true") true false) -}}
+{{- set $opts "enums" (ternary (eq (default .Opts.webrpcHeader "true") "false") false true) -}}
+{{- if (get $opts "zod") }}
+  {{- set $opts "enums" false }}
+{{- end }}
 
 {{- /* Print help on -help. */ -}}
 {{- if exists .Opts "help" -}}
@@ -133,9 +137,9 @@ function parseWebrpcGenVersions(header: string): WebrpcGenVersions {
 
 {{- if $opts.zod}}
   {{- template "zod" dict "Types" .Types "Services" .Services "TypeMap" $typeMap}}
-{{- else }}
-  {{- template "types" dict "Types" .Types "Services" .Services "TypeMap" $typeMap}}
 {{- end}}
+
+{{- template "types" dict "Types" .Types "Services" .Services "TypeMap" $typeMap "enums" $opts.enums }}
 
 {{- if $opts.client}}
   {{template "client" dict "Services" .Services "Opts" $opts "TypeMap" $typeMap "Types" .Types}}

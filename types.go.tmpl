@@ -3,6 +3,7 @@
 {{- $typeMap := .TypeMap -}}
 {{- $types := .Types -}}
 {{- $services := .Services -}}
+{{- $enums := .enums -}}
 
 //
 // Types
@@ -11,7 +12,7 @@
 {{if $types -}}
 {{range $_i, $type := $types -}}
 
-{{if isEnumType $type }}
+{{if and $enums (isEnumType $type) }}
 export enum {{$type.Name}} {
 {{- range $i, $field := $type.Fields}}
   {{- if $i}},{{end}}

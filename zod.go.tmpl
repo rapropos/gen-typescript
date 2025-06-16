@@ -1,6 +1,5 @@
 {{ define "zod"}}
 
-{{- $services := .Services }}
 {{- $types := .Types }}
 {{- $typeMap := .TypeMap }}
 
@@ -17,49 +16,22 @@
     "uint64" "z.number()"
     "float32" "z.number()"
     "float64" "z.number()"
-    "timestamp" "FlexidateSchema"
+    "timestamp" "z.string()"
     "any" "z.any()"
 }}
 
 {{/* we need to get members defined before anything that uses them */}}
 {{- $todoTypes := dict }}
 {{- range $_, $t := $types }}
-// TODO {{$t.Name}}
     {{ $_ := set $todoTypes $t.Name $t }}
 {{- end }}
 
 import {z} from "zod/v4";
 
-export const FlexidateSchema = z.union([z.string(), z.number(), z.date()]);
-
 {{- if $types }}
     {{- range $_i, $type := $types }}
 	    {{- template "zodSchema" dict "Type" $type "TodoTypes" $todoTypes "TypeMap" $coreZxprMap }}
     {{- end }}
-{{- end }}
-
-{{- if $services}}
-    {{- range $_, $service := $services}}
-        {{- range $_, $method := $service.Methods }}
-
-export const {{$method.Name}}ArgsSchema = z.object({
-            {{- range $_, $input := $method.Inputs }}
-    {{$input.Name}}: {{template "zodType" dict "Type" $input.Type "TypeMap" $coreZxprMap }},
-            {{- end }}
-});
-export type {{$method.Name}}Args = z.infer<typeof {{$method.Name}}ArgsSchema>;
-
-export const {{$method.Name}}ReturnSchema = z.object({
-            {{- range $_, $output := $method.Outputs }}
-    {{$output.Name}}: {{if $output.Optional}}z.optional({{end}}{{template "zodType" dict "Type" $output.Type "TypeMap" $coreZxprMap }}{{if $output.Optional}}){{end}},
-            {{- end }}
-});
-export type {{$method.Name}}Return = z.infer<typeof {{$method.Name}}ReturnSchema>;
-        {{- end }}
-
-{{ template "serviceInterface" dict "Service" $service "TypeMap" $typeMap }}
-
-    {{- end}}
 {{- end }}
 
 {{- end }}
