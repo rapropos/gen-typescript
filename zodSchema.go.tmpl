@@ -13,6 +13,7 @@ export const {{$type.Name}}Schema = z.enum([
         {{- end}}
 ]);
 export type {{$type.Name}} = z.infer<typeof {{$type.Name}}Schema>;
+export const {{$type.Name}}s = {{$type.Name}}Schema.enum;
     {{- end }}
 
     {{- if isStructType $type }}

@@ -51,18 +51,36 @@ export function mergeUseQueriesWithInfill<T, TError>(tqrvs: UseQueryResult<T, TE
         errors[ix] = tqrv.error;
     });
 
-    const isSuccess = statusen.every(maybe => maybe === "success");
-    const firstErrorIx = statusen.findIndex(maybe => maybe === "error");
-    const isError = firstErrorIx >= 0;
-    const isPending = statusen.find(maybe => maybe === "pending");
+    let isPending = false;
+    let isSuccess = true;
+    let isError = false;
+
+    ALPHA: for (let ix = 0; ix < data.length; ++ix) {
+        switch (statusen[ix]) {
+        case "pending":
+            isPending = true;
+            isSuccess = false;
+            isError = false;
+            break ALPHA;
+
+        case "success":
+            continue;
+
+        case "error":
+            if (errors[ix]) {
+                isPending = false;
+                isSuccess = false;
+                isError = true;
+            }
+        }
+    }
+
     const status =
 		isError ? "error"
     : isPending ? "pending"
-    : isSuccess ? "success"
-	            : "error";
+    : isSuccess ? "success" : "error";
 
-    return {data, statusen, errors, isSuccess, isError, isPending, status,
-        ...(isError ? {error: errors[firstErrorIx]} : {})};
+    return {data, statusen, errors, isSuccess, isError, isPending, status};
 }
 
 {{- range $_, $service := $services }}

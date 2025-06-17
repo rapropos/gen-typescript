@@ -21,6 +21,7 @@
 {{- $isOutUncertain := false }}
 {{- $outTypeBaseName := false }}
 {{- $ribFetchFieldName := false }}
+{{- $automaticLastValidFallback := false }}
 
 {{- $hasOutput := gt (len $watchMethod.Outputs) 0}}
 {{- if $hasOutput }}
@@ -40,7 +41,7 @@
 
 mama.{{$tsmn}}({{if $hasInput}}{{$argsVarName}}{{end}})
 {{- if eq (len $watchMethod.Outputs) 1}}
-{{-     if and $isOutUncertain $lastValidBackupExists }}
+{{-     if all $automaticLastValidFallback $isOutUncertain $lastValidBackupExists }}
     .then(rpc => {
         return rpc.{{$ribFetchFieldName}}
             ?? mama.{{firstLetterToLower $lastValidBackupMn}}({{$argsVarName}})
