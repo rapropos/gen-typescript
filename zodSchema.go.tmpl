@@ -43,7 +43,32 @@ export const {{$type.Name}}Schema = z.object({
             {{- end }}
         {{- end}}
 });
-    {{- end }}
+
+        {{- $fieldNames := dict }}
+		{{- range $_, $field := $type.Fields }}
+		    {{ set $fieldNames $field.Name true }}
+		{{- end }}
+        {{- if hasKey $fieldNames "id" }}
+export const {{$type.Name}}DeltaSchema = z.object({
+            {{- range $_, $field := $type.Fields}}
+                {{- $isExportable := true }}
+                {{- range $meta := $field.Meta }}
+                    {{- if exists $meta "json" }}
+                        {{- if eq (printf "%v" (get $meta "json")) "-" }}
+                            {{- $isExportable = false}}
+                        {{- end }}
+                    {{- end }}
+                {{- end }}
+
+                {{- if $isExportable }}
+                    {{template "fieldName" dict "Field" .}}: {{if ne $field.Name "id"}}z.optional({{end}}{{template "zodType" dict "Type" $field.Type "TypeMap" $typeMap}}{{if ne $field.Name "id"}}){{end}},
+                {{- end }}
+            {{- end}}
+});
+        {{- end }}
+
+
+{{- end }}
 
 	{{ $_ :=unset $todoTypes $type.Name }}
 {{- end }}

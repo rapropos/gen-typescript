@@ -6,6 +6,7 @@
 {{- set $opts "server" (ternary (in .Opts.server "" "true") true false) -}}
 {{- set $opts "webrpcHeader" (ternary (eq (default .Opts.webrpcHeader "true") "false") false true) -}}
 {{- set $opts "tq" (ternary (in .Opts.tq "" "true") true false) -}}
+{{- set $opts "infallibleTq" (ternary (in .Opts.infallibleTq "" "true") true false) -}}
 {{- set $opts "zod" (ternary (in .Opts.zod "" "true") true false) -}}
 {{- set $opts "enums" (ternary (eq (default .Opts.webrpcHeader "true") "false") false true) -}}
 {{- if (get $opts "zod") }}

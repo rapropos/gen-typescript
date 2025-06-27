@@ -3,6 +3,7 @@
 {{- $watchMethod := .watchMethod }}
 {{- $methodMap := .MethodMap }}
 {{- $serviceName := .serviceName}}
+{{- $infallible := .infallible }}
 
 {{- $tsmn := firstLetterToLower $watchMethod.Name }}
 {{- $baseName := trimPrefix $watchMethod.Name "Watch" }}
@@ -56,12 +57,13 @@ export function {{$tsmn}}Tqo(mama: {{$serviceName}}, args?: {{$baseName}}Args) {
         queryFn: args
             ? () => {{template "tqfn" dict "watchMethod" $watchMethod "MethodMap" $methodMap }}
             : skipToken,
+            {{if $infallible}}throwOnError: true,{{end}}
     });
 }
 
 export function use{{$baseName}}(args?: {{$baseName}}Args) {
     const mama = useMothership();
-	return useRefreshableQuery({{$tsmn}}Tqo(mama, args));
+	return useRefreshable{{if $infallible}}Infallible{{end}}Query({{$tsmn}}Tqo(mama, args));
 }
 
 export function useFull{{$baseName}}(args?: {{$baseName}}Args) {
@@ -103,12 +105,13 @@ export function {{$tsmn}}Tqo(mama: {{$serviceName}}) {
     return queryOptions({
         queryKey: {{$tsbn}}Tqk,
         queryFn: () => {{template "tqfn" dict "watchMethod" $watchMethod "MethodMap" $methodMap }},
+        {{if $infallible}}throwOnError: true,{{end}}
     });
 }
 
 export function use{{$baseName}}() {
     const mama = useMothership();
-	return useQuery({{$tsmn}}Tqo(mama));
+	return useRefreshable{{if $infallible}}Infallible{{end}}Query({{$tsmn}}Tqo(mama));
 }
 
 export function useFull{{$baseName}}() {
@@ -155,12 +158,13 @@ export function {{$tsmn}}Tqo(mama: {{$serviceName}}, args ?: {{$baseName}}Args) 
         queryFn: args
             ? () => {{template "tqfn" dict "watchMethod" $watchMethod "MethodMap" $methodMap }}
         : skipToken,
+        {{if $infallible}}throwOnError: true,{{end}}
     });
 }
 
 export function use{{$baseName}}(args ?: {{$baseName}}Args) {
     const mama = useMothership();
-	return useQuery({{$tsmn}}Tqo(mama, args));
+	return useRefreshable{{if $infallible}}Infallible{{end}}Query({{$tsmn}}Tqo(mama, args));
 }
 
 export function useFull{{$baseName}}(args ?: {{$baseName}}Args) {
@@ -168,7 +172,7 @@ export function useFull{{$baseName}}(args ?: {{$baseName}}Args) {
     const {data: stub} = use{{$baseName}}(args);
 	const ribArgs = stub ? { {{$ribFetchFieldName}}Id: stub.id } as const : undefined;
 
-	return useRefreshableQuery({
+	return useRefreshable{{if $infallible}}Infallible{{end}}Query({
 		queryKey: {{$ribFetchFieldName}}ByIdTqk(ribArgs),
 		queryFn: ribArgs
             ? () => {{ template "tqfn" dict "watchMethod" $byIdWatcherMethod "MethodMap" $methodMap "argsVarName" "ribArgs" }}
@@ -181,12 +185,13 @@ export function {{$tsmn}}Tqo(mama: {{$serviceName}}) {
     return queryOptions({
         queryKey: {{$tsbn}}Tqk,
         queryFn: () => {{template "tqfn" dict "watchMethod" $watchMethod "MethodMap" $methodMap }},
+        {{if $infallible}}throwOnError: true,{{end}}
     });
 }
 
 export function use{{$baseName}}() {
     const mama = useMothership();
-	return useRefreshableQuery({{$tsmn}}Tqo());
+	return useRefreshable{{if $infallible}}Infallible{{end}}Query({{$tsmn}}Tqo());
 }
 
 export function useFull{{$baseName}}() {
@@ -194,7 +199,7 @@ export function useFull{{$baseName}}() {
     const {data: stub} = use{{$baseName}}();
 
     const ribArgs = stub ? { {{$ribFetchFieldName}}Id: stub.id } as const : undefined;
-    return useRefreshableQuery({
+    return useRefreshable{{if $infallible}}Infallible{{end}}Query({
         queryKey: {{$ribFetchFieldName}}ByIdTqk(ribArgs),
         queryFn: ribArgs
 		    ? () => {{ template "tqfn" dict "watchMethod" $byIdWatcherMethod "MethodMap" $methodMap "argsVarName" "ribArgs" }}
@@ -214,12 +219,13 @@ export function {{$tsmn}}Tqo(mama: {{$serviceName}}, args ?: {{$baseName}}Args) 
         queryFn: args
             ? () => {{template "tqfn" dict "watchMethod" $watchMethod "MethodMap" $methodMap }}
             : skipToken,
+        {{if $infallible}}throwOnError: true,{{end}}
     });
 }
 
 export function use{{$baseName}}(args ?: {{$baseName}}Args) {
 	const mama = useMothership();
-	return useRefreshableQuery({{$tsmn}}Tqo(mama, args));
+	return useRefreshable{{if $infallible}}Infallible{{end}}Query({{$tsmn}}Tqo(mama, args));
 }
 {{-    else }}
 // {{$baseName}} takes no args
@@ -227,12 +233,13 @@ export function {{$tsmn}}Tqo(mama: {{$serviceName}}) {
 	return queryOptions({
         queryKey: {{$tsbn}}Tqk,
         queryFn: () => {{template "tqfn" dict "watchMethod" $watchMethod "MethodMap" $methodMap }},
+        {{if $infallible}}throwOnError: true,{{end}}
     });
 }
 
 export function use{{$baseName}}() {
     const mama = useMothership();
-    return useRefreshableQuery({{$tsmn}}Tqo(mama));
+    return useRefreshable{{if $infallible}}Infallible{{end}}Query({{$tsmn}}Tqo(mama));
 }
 {{-    end }}
 {{- end }}

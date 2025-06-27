@@ -3,14 +3,16 @@
 {{- $services := .Services }}
 {{- $typeMap := .TypeMap }}
 {{- $types := .Types }}
+{{- $infallible := .Infallible }}
 
 {{- if $services}}
 
 /** TQK **/
 import {queryOptions, Query, DefaultError, QueryClient, QueryKey,
-	QueryObserverResult, useQuery, useQueries, UseQueryResult, skipToken} from "@tanstack/react-query";
+	useQueries, skipToken} from "@tanstack/react-query";
 import {useMothership} from "./mama";
-import {useRefreshableQuery, useRefreshSet} from "../tqutil";
+import {useRefreshSet, useRefreshable{{if $infallible}}Infallible{{end}}Query,
+	mergeUseQueriesWithInfill} from "../tqutil";
 import {isDeepEqual} from "remeda";
 import {useEffect, useState} from "react";
 
@@ -36,52 +38,6 @@ export const DEADBEEF_QUERY_OPTS = queryOptions({
     queryFn: skipToken,
     initialData: TQDEADBEEF,
 });
-
-// this always gives data back as an array as large as the number of queries passed
-// everything that has not settled will have undefined in its slot in the data array
-// status and error are laid out in parallel
-export function mergeUseQueriesWithInfill<T, TError>(tqrvs: UseQueryResult<T, TError>[]) {
-    const data: (T | undefined)[] = [];
-    const statusen: QueryObserverResult["status"][] = [];
-    const errors: (TError | null)[] = [];
-
-    tqrvs.forEach((tqrv, ix) => {
-        data[ix] = tqrv.data;
-        statusen[ix] = tqrv.status;
-        errors[ix] = tqrv.error;
-    });
-
-    let isPending = false;
-    let isSuccess = true;
-    let isError = false;
-
-    ALPHA: for (let ix = 0; ix < data.length; ++ix) {
-        switch (statusen[ix]) {
-        case "pending":
-            isPending = true;
-            isSuccess = false;
-            isError = false;
-            break ALPHA;
-
-        case "success":
-            continue;
-
-        case "error":
-            if (errors[ix]) {
-                isPending = false;
-                isSuccess = false;
-                isError = true;
-            }
-        }
-    }
-
-    const status =
-		isError ? "error"
-    : isPending ? "pending"
-    : isSuccess ? "success" : "error";
-
-    return {data, statusen, errors, isSuccess, isError, isPending, status};
-}
 
 {{- range $_, $service := $services }}
 {{- $tqkDone := dict }}
@@ -147,7 +103,8 @@ export function mergeUseQueriesWithInfill<T, TError>(tqrvs: UseQueryResult<T, TE
 {{- template "tqo" dict
     "watchMethod" $method
     "MethodMap" $methodMap
-    "serviceName" $service.Name }}
+    "serviceName" $service.Name
+    "infallible" $infallible }}
 {{- end }}
 // TQMLOOPEND
 {{- end }}{{/* method loop */}}
