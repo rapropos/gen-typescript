@@ -2,6 +2,7 @@
 
 {{- $types := .Types }}
 {{- $typeMap := .TypeMap }}
+{{- $services := .Services }}
 
 {{- $coreZxprMap := dict
     "string" "z.string()"
@@ -26,12 +27,210 @@
     {{ $_ := set $todoTypes $t.Name $t }}
 {{- end }}
 
+{{- $watchedTypes := dict }}
+
+{{- range $_, $svc := $services }}
+    {{- range $_, $meth := $svc.Methods }}
+		{{- if hasPrefix $meth.Name "Watch" }}
+		    {{ $rt := (index $meth.Outputs 0).Type }}
+			{{- if isListType $rt }}
+				{{ $rt = $rt.List.Elem }}
+			{{- end }}
+			{{ set $watchedTypes $rt.Expr $rt }}
+		{{- end}}
+	{{- end }}
+{{- end }}
+
 import {z} from "zod/v4";
 
+type Transition<T> = {
+	prev: T;
+	next: T;
+}
+
+interface Ided {
+	id: string;
+}
+
+function applyPatch<T extends Ided>(prev: T, trans: Transition<Partial<T>>): Partial<T> {
+	const next = structuredClone(prev) as Record<string, any>;
+	for (const k in trans.prev) {
+		if (k !== "id") {
+			// eslint-disable-next-line @typescript-eslint/no-dynamic-delete
+			delete (next[k]);
+		}
+	}
+	for (const k in trans.next) {
+		if (k !== "id") {
+			next[k] = trans.next[k];
+		}
+	}
+	const rv = next as T;
+	return rv;
+}
+
+type SealedLetter<Envelope extends PropertyKey, LetterT> = Record<Envelope, LetterT>;
+
+function replaceLetter<const Envelope extends PropertyKey, const LetterT>(orig: SealedLetter<Envelope, LetterT>, nv: LetterT): SealedLetter<Envelope, LetterT> {
+	const k0 = Object.keys(orig)[0];
+	const rv = Object.fromEntries([[k0, nv]]) as SealedLetter<Envelope, LetterT>;
+	return rv;
+}
+
+function patchSingleLetter<Envelope extends string, LetterT extends Ided>(orig: SealedLetter<Envelope, LetterT>, trans: Transition<Partial<LetterT>>): SealedLetter<Envelope, Partial<LetterT>> {
+	const k0 = Object.keys(orig)[0] as Envelope;
+	const prevLetter = orig[k0];
+	const nextLetter = applyPatch(prevLetter, trans);
+	const next = replaceLetter(orig, nextLetter);
+	return next;
+}
+
+function patchMultiLetter<Envelope extends string, LetterElemT extends Ided>(orig: SealedLetter<Envelope, LetterElemT[]>, trans: Transition<Partial<LetterElemT>>): SealedLetter<Envelope, Partial<LetterElemT>[]> | undefined {
+	const k0 = Object.keys(orig)[0] as Envelope;
+	const prevLetter = orig[k0];
+	const wantedId = trans.next.id;
+	if (!wantedId) {
+		throw new Error(`malformed transition ${JSON.stringify(trans)}`);
+	}
+	const xix = prevLetter.findIndex(maybe => maybe.id === wantedId);
+	if (xix === -1) {
+		return undefined;
+	}
+	const nextElem = applyPatch(prevLetter[xix], trans);
+	const nextLetter: Partial<LetterElemT>[] = structuredClone(prevLetter);
+	nextLetter[xix] = nextElem;
+	const next = replaceLetter(orig, nextLetter);
+	return next;
+}
+
 {{- if $types }}
-    {{- range $_i, $type := $types }}
-	    {{- template "zodSchema" dict "Type" $type "TodoTypes" $todoTypes "TypeMap" $coreZxprMap }}
+    {{- range $_, $type := $types }}
+		{{- if hasKey $todoTypes $type.Name }}
+			{{- if isEnumType $type }}
+				{{- template "zodEnum" dict "Name" $type.Name "Fields" $type.Fields "TodoTypes" $todoTypes }}
+			{{- else if isStructType $type }}
+				{{- template "zodStruct" dict
+					"Name" $type.Name "Fields" $type.Fields "TypeMap" $coreZxprMap
+					"TodoTypes" $todoTypes "WatchedTypes" $watchedTypes }}
+			{{- else }}
+				// problem {{$type}} neither struct nor enum
+			{{- end }}
+		{{- end }}
     {{- end }}
+
+export const RpcTypeMap = {
+    {{- range $_, $type := $types }}
+        {{$type.Name}}: {
+			name: "{{$type.Name}}",
+			schema: {{$type.Name}}Schema,
+			deltaTransitionSchema: {{ if hasKey $watchedTypes $type.Name }}{{$type.Name}}DeltaTransitionSchema{{else}}undefined{{end}},
+        },
+    {{- end }}
+} as const;
+export type RpcType = keyof typeof RpcTypeMap;
+{{- end }}
+
+{{- if $services }}
+    {{- range $_, $svc := $services }}
+	    {{- range $_, $meth := $svc.Methods }}
+			// method {{$meth}}
+			{{- if gt (len $meth.Inputs) 0 }}
+				{{- template "zodStruct" dict
+					"Name" (print $meth.Name "Args") "Fields" $meth.Inputs "TypeMap" $coreZxprMap
+					"TodoTypes" $todoTypes "WatchedTypes" $watchedTypes }}
+			{{- end}}
+			{{- if gt (len $meth.Outputs) 0 }}
+				{{- template "zodStruct" dict
+					"Name" (print $meth.Name "Return") "Fields" $meth.Outputs "TypeMap" $coreZxprMap
+					"TodoTypes" $todoTypes "WatchedTypes" $watchedTypes }}
+			{{- end}}
+		{{- end }}
+	{{- end }}
+
+export const RpcVerbMap = {
+	{{- range $_, $svc := $services }}
+		{{- range $_, $method := $svc.Methods }}
+			{{- $isWatcher := false }}
+			{{- $verb := $method.Name }}
+			{{- if hasPrefix $verb "Watch" }}
+				{{ $isWatcher = true }}
+				{{ $verb = trimPrefix $verb "Watch" }}
+			{{- end }}
+			{{- $returnSingleton := "DEADBEEF" }}
+			{{- $returnPayloadType := "DEADBEEF" }}
+			{{- $returnEnvelope := "" }}
+			{{- $returnElemTypeName := "" }}
+			{{- $setlistPayloadType := "DEADBEEF" }}
+			{{- $multiplicity := "" }}
+			{{- $returnSchema := "z.never()" }}
+			{{- $hasOutput := gt (len $method.Outputs) 0 }}
+			{{- if $hasOutput }}
+				{{- $returnSingleton = index $method.Outputs 0 }}
+				{{- $returnPayloadType = $returnSingleton.Type }}
+				{{- $returnEnvelope = $returnSingleton.Name }}
+				{{- $returnElemTypeName = trimPrefix $returnSingleton.Type.Expr "[]" }}
+				{{- if hasKey $typeMap $returnElemTypeName }}
+					{{ $returnElemTypeName = get $typeMap $returnElemTypeName }}
+k				{{- end }}
+				{{- if isListType $returnPayloadType }}
+					{{- $setlistPayloadType = $returnPayloadType.List.Elem }}
+				{{- else }}
+					{{- $setlistPayloadType = $returnPayloadType }}
+				{{- end }}
+				{{- $multiplicity = ternary (eq $returnElemTypeName $returnSingleton.Type.Expr) "single" "multi" }}
+				{{- $returnSchema = print $method.Name "ReturnSchema" }}
+			{{- end }}
+			{{- $hasInput := gt (len $method.Inputs) 0 }}
+
+			{{$verb}}: {
+			{{- if $hasInput}}
+			argsSchema: {{$method.Name}}ArgsSchema,
+			tqkSchema: z.tuple([z.literal("{{$verb}}"), z.optional({{$method.Name}}ArgsSchema)]),
+			{{- else }}
+			argsSchema: z.never(),
+			tqkSchema: z.tuple([z.literal("{{$verb}}")]),
+			{{end}}
+
+			returnEnvelope: "{{$returnEnvelope}}",
+			returnSchema: {{$returnSchema}},
+			multiplicity: "{{$multiplicity}}",
+
+			{{- if $hasOutput }}
+			unwrapReturn: (rpc: {{$method.Name}}Return) => rpc.{{$returnEnvelope}},
+			returnLetterSchema: {{template "zodType" dict "Type" $returnSingleton.Type "TypeMap" $coreZxprMap }},
+			returnLetterTypeName: "{{$returnElemTypeName}}",
+				{{- if $isWatcher}}
+			patchReturn: (prev: {{$method.Name}}ReturnRequired, trans: Transition<Partial<{{$returnElemTypeName}}>>): {{$method.Name}}ReturnRequired => {
+				return {{$method.Name}}ReturnRequiredSchema.parse(patch{{firstLetterToUpper $multiplicity}}Letter(prev, trans));
+			},
+			setlistPayloadSchema: {{template "zodType" dict "Type" $setlistPayloadType "TypeMap" $coreZxprMap }},
+			setlistPayloadTypeName: "{{$setlistPayloadType.Expr}}",
+				{{- else }}
+			patchReturn: () => undefined,
+			setlistPayloadSchema: z.never(),
+			setlistPayloadTypeName: undefined,
+				{{- end}}
+			{{- else }}
+			unwrapReturn: () => undefined,
+			returnLetterSchema: z.never(),
+			returnLetterTypeName: undefined,
+			patchReturn: () => undefined,
+			setlistPayloadSchema: z.never(),
+			setlistPayloadTypeName: undefined,
+			{{- end }}
+
+			},
+		{{- end }}
+	{{- end }}
+} as const;
+export type RpcVerb = keyof typeof RpcVerbMap;
+export type ArgsSchemaFor<Verb extends RpcVerb> = typeof RpcVerbMap[Verb] extends { argsSchema: unknown }
+	? typeof RpcVerbMap[Verb]["argsSchema"] : never;
+export type ReturnSchemaFor<Verb extends RpcVerb> = typeof RpcVerbMap[Verb] extends { returnSchema: unknown }
+	? typeof RpcVerbMap[Verb]["returnSchema"] : never;
+export type TqKey<Verb extends RpcVerb> = z.infer<typeof RpcVerbMap[Verb]["tqkSchema"]>;
+export type SetlistPayloadFor<Verb extends RpcVerb> = z.infer<typeof RpcVerbMap[Verb]["setlistPayloadSchema"]>;
+
 {{- end }}
 
 {{- end }}

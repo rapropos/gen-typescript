@@ -1,18 +1,18 @@
 {{ define "tqfn" }}
 
-{{- $watchMethod := .watchMethod }}
+{{- $method := .Method }}
 {{- $methodMap := .MethodMap }}
 {{- $argsVarName := .argsVarName }}
 {{- if not $argsVarName }}
 {{      $argsVarName = "args" }}
 {{- end}}
 
-{{- $tsmn := firstLetterToLower $watchMethod.Name }}
+{{- $tsmn := firstLetterToLower $method.Name }}
 
-{{- $baseName := trimPrefix $watchMethod.Name "Watch" }}
+{{- $baseName := trimPrefix $method.Name "Watch" }}
 {{- $tsbn := firstLetterToLower $baseName }}
 
-{{- $hasInput := gt (len $watchMethod.Inputs) 0}}
+{{- $hasInput := gt (len $method.Inputs) 0}}
 
 {{- $out := false }}
 {{- $outTypeName := false }}
@@ -23,9 +23,9 @@
 {{- $ribFetchFieldName := false }}
 {{- $automaticLastValidFallback := false }}
 
-{{- $hasOutput := gt (len $watchMethod.Outputs) 0}}
+{{- $hasOutput := gt (len $method.Outputs) 0}}
 {{- if $hasOutput }}
-{{-     $out = index $watchMethod.Outputs 0}}
+{{-     $out = index $method.Outputs 0}}
 {{-     $outTypeName = $out.Type.Expr }}
 {{-     $isOutSlice = hasPrefix $outTypeName "[]"}}
 {{-     $isOutStub = hasSuffix $outTypeName "Stub"}}
@@ -38,17 +38,13 @@
 {{- $lastValidBackupExists := hasKey $methodMap $lastValidBackupMn}}
 {{- $byIdEnsurerFnm := print "ensure" $outTypeBaseName "ById"}}
 {{- $byIdFetcherFnm := print "watch" $outTypeBaseName "ById" -}}
-
 mama.{{$tsmn}}({{if $hasInput}}{{$argsVarName}}{{end}})
-{{- if eq (len $watchMethod.Outputs) 1}}
-{{-     if all $automaticLastValidFallback $isOutUncertain $lastValidBackupExists }}
+{{- if eq (len $method.Outputs) 1}}
+    {{- if all $automaticLastValidFallback $isOutUncertain $lastValidBackupExists }}
     .then(rpc => {
         return rpc.{{$ribFetchFieldName}}
-            ?? mama.{{firstLetterToLower $lastValidBackupMn}}({{$argsVarName}})
-			    .then(lvrpc => lvrpc.{{$ribFetchFieldName}});
+            ?? mama.{{firstLetterToLower $lastValidBackupMn}}({{$argsVarName}});
 	})
-{{-     else if $out}}
-    .then(rpc => rpc.{{$out.Name}})
-{{-     end}}
+    {{- end}}
 {{- end }}
 {{- end }}

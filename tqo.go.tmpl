@@ -1,15 +1,15 @@
 {{define "tqo"}}
 // TQOTOP
-{{- $watchMethod := .watchMethod }}
+{{- $method := .Method }}
 {{- $methodMap := .MethodMap }}
 {{- $serviceName := .serviceName}}
 {{- $infallible := .infallible }}
 
-{{- $tsmn := firstLetterToLower $watchMethod.Name }}
-{{- $baseName := trimPrefix $watchMethod.Name "Watch" }}
+{{- $tsmn := firstLetterToLower $method.Name }}
+{{- $baseName := trimPrefix $method.Name "Watch" }}
 {{- $tsbn := firstLetterToLower $baseName }}
 
-{{- $hasInput := gt (len $watchMethod.Inputs) 0}}
+{{- $hasInput := gt (len $method.Inputs) 0}}
 
 {{- $out := false }}
 {{- $outTypeName := false }}
@@ -23,10 +23,11 @@
 {{- $byIdWatcherMn := false }}
 {{- $hasByIdWatcher := false }}
 {{- $byIdWatcherMethod := false }}
+{{- $byIdWatcherEnvelope := false }}
 
-{{- $hasOutput := gt (len $watchMethod.Outputs) 0}}
+{{- $hasOutput := gt (len $method.Outputs) 0}}
 {{- if $hasOutput }}
-{{-     $out = index $watchMethod.Outputs 0}}
+{{-     $out = index $method.Outputs 0}}
 {{-     $outTypeName = $out.Type.Expr }}
 {{-     $isOutSlice = hasPrefix $outTypeName "[]"}}
 {{-     $isOutStub = hasSuffix $outTypeName "Stub"}}
@@ -37,9 +38,14 @@
 {{-     $lastValidBackupExists = hasKey $methodMap $lastValidBackupMn }}
 {{-     $byIdWatcherMn = print "Watch" $outTypeBaseName "ById" }}
 {{-     $hasByIdWatcher = hasKey $methodMap $byIdWatcherMn }}
-{{-     if $hasByIdWatcher }}
-{{-         $byIdWatcherMethod = get $methodMap $byIdWatcherMn }}
-{{-     end }}
+        {{- if $hasByIdWatcher }}
+        {{- $byIdWatcherMethod = get $methodMap $byIdWatcherMn }}
+            {{- if $byIdWatcherMethod }}
+                {{- if gt (len $byIdWatcherMethod.Outputs) 0 }}
+                    {{- $byIdWatcherEnvelope = (index $byIdWatcherMethod.Outputs 0).Name }}
+                {{- end }}
+            {{- end }}
+        {{- end }}
 {{- end }}
 
 {{- if $isOutStub }}
@@ -55,9 +61,10 @@ export function {{$tsmn}}Tqo(mama: {{$serviceName}}, args?: {{$baseName}}Args) {
     return queryOptions({
         queryKey: {{$tsbn}}Tqk(args),
         queryFn: args
-            ? () => {{template "tqfn" dict "watchMethod" $watchMethod "MethodMap" $methodMap }}
+            ? () => {{template "tqfn" dict "Method" $method "MethodMap" $methodMap }}
             : skipToken,
-            {{if $infallible}}throwOnError: true,{{end}}
+        {{if $infallible}}throwOnError: true,{{end}}
+		select: (data: {{$method.Name}}Return) => data.{{$out.Name}},
     });
 }
 
@@ -66,6 +73,7 @@ export function use{{$baseName}}(args?: {{$baseName}}Args) {
 	return useRefreshable{{if $infallible}}Infallible{{end}}Query({{$tsmn}}Tqo(mama, args));
 }
 
+                    {{- if $hasByIdWatcher }}
 export function useFull{{$baseName}}(args?: {{$baseName}}Args) {
     const mama = useMothership();
 	const {data: stubs} = use{{$baseName}}(args);
@@ -75,8 +83,9 @@ export function useFull{{$baseName}}(args?: {{$baseName}}Args) {
             {{- $ribFetchFieldName}}Id: stub.id} as const;
         return {
             queryKey: {{$ribFetchFieldName}}ByIdTqk(ribArgs),
-            queryFn: () => {{template "tqfn" dict "watchMethod" $byIdWatcherMethod "MethodMap" $methodMap "argsVarName" "ribArgs"}},
-        } as const;
+            queryFn: () => {{template "tqfn" dict "Method" $byIdWatcherMethod "MethodMap" $methodMap "argsVarName" "ribArgs"}},
+            select: (data: {{$byIdWatcherMethod.Name}}Return) => data.{{$byIdWatcherEnvelope}},
+} as const;
     });
 
     const refreshManager = useRefreshSet();
@@ -99,14 +108,16 @@ export function useFull{{$baseName}}(args?: {{$baseName}}Args) {
         combine: mergeUseQueriesWithInfill,
     });
 }
+                    {{- end }}{{/* no ribfetcher */}}
 {{-             else }}{{/* no input */}}
 // {{$baseName}} takes no args
 export function {{$tsmn}}Tqo(mama: {{$serviceName}}) {
     return queryOptions({
         queryKey: {{$tsbn}}Tqk,
-        queryFn: () => {{template "tqfn" dict "watchMethod" $watchMethod "MethodMap" $methodMap }},
+        queryFn: () => {{template "tqfn" dict "Method" $method "MethodMap" $methodMap }},
         {{if $infallible}}throwOnError: true,{{end}}
-    });
+        select: (data: {{$method.Name}}Return) => data.{{$out.Name}},
+});
 }
 
 export function use{{$baseName}}() {
@@ -123,7 +134,8 @@ export function useFull{{$baseName}}() {
             {{- $ribFetchFieldName}}Id: stub.id} as const;
         return {
             queryKey: {{$ribFetchFieldName}}ByIdTqk(ribArgs),
-            queryFn: () => {{template "tqfn" dict "watchMethod" $byIdWatcherMethod "MethodMap" $methodMap "argsVarName" "ribArgs"}},
+            queryFn: () => {{template "tqfn" dict "Method" $byIdWatcherMethod "MethodMap" $methodMap "argsVarName" "ribArgs"}},
+            select: (data: {{$byIdWatcherMethod.Name}}Return) => data.{{$byIdWatcherEnvelope}},
         } as const;
     });
 
@@ -156,9 +168,10 @@ export function {{$tsmn}}Tqo(mama: {{$serviceName}}, args ?: {{$baseName}}Args) 
     return queryOptions({
         queryKey: {{$tsbn}}Tqk(args),
         queryFn: args
-            ? () => {{template "tqfn" dict "watchMethod" $watchMethod "MethodMap" $methodMap }}
+            ? () => {{template "tqfn" dict "Method" $method "MethodMap" $methodMap }}
         : skipToken,
         {{if $infallible}}throwOnError: true,{{end}}
+        select: (data: {{$method.Name}}Return) => data.{{$out.Name}},
     });
 }
 
@@ -175,7 +188,7 @@ export function useFull{{$baseName}}(args ?: {{$baseName}}Args) {
 	return useRefreshable{{if $infallible}}Infallible{{end}}Query({
 		queryKey: {{$ribFetchFieldName}}ByIdTqk(ribArgs),
 		queryFn: ribArgs
-            ? () => {{ template "tqfn" dict "watchMethod" $byIdWatcherMethod "MethodMap" $methodMap "argsVarName" "ribArgs" }}
+            ? () => {{ template "tqfn" dict "Method" $byIdWatcherMethod "MethodMap" $methodMap "argsVarName" "ribArgs" }}
             : skipToken,
     });
 }
@@ -184,9 +197,10 @@ export function useFull{{$baseName}}(args ?: {{$baseName}}Args) {
 export function {{$tsmn}}Tqo(mama: {{$serviceName}}) {
     return queryOptions({
         queryKey: {{$tsbn}}Tqk,
-        queryFn: () => {{template "tqfn" dict "watchMethod" $watchMethod "MethodMap" $methodMap }},
-        {{if $infallible}}throwOnError: true,{{end}}
-    });
+        queryFn: () => {{template "tqfn" dict "Method" $method "MethodMap" $methodMap }},
+        {{if $infallible}}throwOnError: true,{{end}},
+        select: (data: {{$method.Name}}Return) => data.{{$out.Name}},
+	});
 }
 
 export function use{{$baseName}}() {
@@ -202,7 +216,7 @@ export function useFull{{$baseName}}() {
     return useRefreshable{{if $infallible}}Infallible{{end}}Query({
         queryKey: {{$ribFetchFieldName}}ByIdTqk(ribArgs),
         queryFn: ribArgs
-		    ? () => {{ template "tqfn" dict "watchMethod" $byIdWatcherMethod "MethodMap" $methodMap "argsVarName" "ribArgs" }}
+		    ? () => {{ template "tqfn" dict "Method" $byIdWatcherMethod "MethodMap" $methodMap "argsVarName" "ribArgs" }}
 			: skipToken,
     });
 }
@@ -217,9 +231,10 @@ export function {{$tsmn}}Tqo(mama: {{$serviceName}}, args ?: {{$baseName}}Args) 
     return queryOptions({
         queryKey: {{$tsbn}}Tqk(args),
         queryFn: args
-            ? () => {{template "tqfn" dict "watchMethod" $watchMethod "MethodMap" $methodMap }}
+            ? () => {{template "tqfn" dict "Method" $method "MethodMap" $methodMap }}
             : skipToken,
         {{if $infallible}}throwOnError: true,{{end}}
+        {{if $hasOutput}}select: (data: {{$method.Name}}Return) => data.{{$out.Name}},{{end}}
     });
 }
 
@@ -227,13 +242,14 @@ export function use{{$baseName}}(args ?: {{$baseName}}Args) {
 	const mama = useMothership();
 	return useRefreshable{{if $infallible}}Infallible{{end}}Query({{$tsmn}}Tqo(mama, args));
 }
-{{-    else }}
+{{-    else }}{{/* no input */}}
 // {{$baseName}} takes no args
 export function {{$tsmn}}Tqo(mama: {{$serviceName}}) {
 	return queryOptions({
         queryKey: {{$tsbn}}Tqk,
-        queryFn: () => {{template "tqfn" dict "watchMethod" $watchMethod "MethodMap" $methodMap }},
+        queryFn: () => {{template "tqfn" dict "Method" $method "MethodMap" $methodMap }},
         {{if $infallible}}throwOnError: true,{{end}}
+        {{if $hasOutput}}select: (data: {{$method.Name}}Return) => data.{{$out.Name}},{{end}}
     });
 }
 

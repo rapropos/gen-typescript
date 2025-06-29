@@ -90,18 +90,18 @@ export const DEADBEEF_QUERY_OPTS = queryOptions({
 
 {{- if hasKey $tqkDone $baseName }}{{- else}}
 {{- template "tqk" dict
-    "watchMethod" $method
+    "Method" $method
     "MethodMap" $methodMap
     "TypeMap" $typeMap }}
 {{- template "tqp" dict
     "service" $service
-    "watchMethod" $method
+    "Method" $method
     "MethodMap" $methodMap
     "TypeMap" $typeMap }}
 {{- set $tqkDone $baseName true}}
 {{- end}}
 {{- template "tqo" dict
-    "watchMethod" $method
+    "Method" $method
     "MethodMap" $methodMap
     "serviceName" $service.Name
     "infallible" $infallible }}

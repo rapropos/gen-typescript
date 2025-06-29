@@ -1,0 +1,148 @@
+{{ define "zodStruct" }}
+
+{{ $name := .Name }}
+{{ $fields := .Fields }}
+{{ $typeMap := .TypeMap }}
+{{ $todoTypes := .TodoTypes }}
+{{ $watchedTypes := .WatchedTypes }}
+
+{{- /* ensure referenced types are defined first */}}
+{{- range $_, $field := $fields }}
+    {{ $fbtn:= trimPrefix $field.Type.Expr "[]"}}
+    {{- if hasKey $todoTypes $fbtn }}
+    // prioritizing {{$fbtn}} needed for {{$name}}
+	    {{ $fbt := get $todoTypes $fbtn }}
+		{{- if isEnumType $fbt }}
+		    {{- template "zodEnum" dict "Name" $fbtn "Fields" $fbt.Fields "TodoTypes" $todoTypes }}
+		{{- else if isStructType $fbt }}
+            {{- template "zodStruct" dict "Name" $fbtn "Fields" $fbt.Fields
+                "TypeMap" $typeMap "TodoTypes" $todoTypes "WatchedTypes" $watchedTypes }}
+		{{- else }}
+		// ERROR: {{$fbt}} neither enum nor struct
+		{{- end }}
+		{{ $_ := unset $todoTypes $fbtn }}
+    {{- end }}
+{{- end }}
+
+export const {{$name}}Schema = z.object({
+{{- range $_, $field := $fields}}
+    {{- $isExportable := true }}
+    {{- range $meta := $field.Meta }}
+        {{- if exists $meta "json" }}
+            {{- if eq (printf "%v" (get $meta "json")) "-" }}
+                {{- $isExportable = false}}
+            {{- end }}
+        {{- end }}
+    {{- end }}
+
+    {{- if $isExportable }}
+        {{template "fieldName" dict "Field" .}}: {{if .Optional}}z.optional({{end}}{{template "zodType" dict "Type" $field.Type "TypeMap" $typeMap}}{{if .Optional}}){{end}},
+    {{- end }}
+{{- end}}
+});
+
+export const {{$name}}RequiredSchema = z.object({
+{{- range $_, $field := $fields}}
+    {{- $isExportable := true }}
+    {{- range $meta := $field.Meta }}
+        {{- if exists $meta "json" }}
+            {{- if eq (printf "%v" (get $meta "json")) "-" }}
+			    {{- $isExportable = false}}
+            {{- end }}
+        {{- end }}
+    {{- end }}
+
+    {{- if $isExportable }}
+    {{template "fieldName" dict "Field" .}}: {{template "zodType" dict "Type" $field.Type "TypeMap" $typeMap}},
+    {{- end }}
+{{- end}}
+});
+export type {{$name}}Required = z.infer<typeof {{$name}}RequiredSchema>;
+
+{{- if hasKey $watchedTypes $name }}
+    {{- $fieldNames := dict }}
+
+    {{- range $_, $field := $fields }}
+        {{ set $fieldNames $field.Name true }}
+    {{- end }}
+
+    {{- if hasKey $fieldNames "id" }}
+export const {{$name}}SingleAliveTransitionSchema = z.object({
+    dlta: z.optional(z.never()),
+    next: {{$name}}Schema,
+});
+
+export const {{$name}}DelTransitionSchema = z.object({
+    dlta: z.optional(z.never()),
+	prev: z.object({id: z.string()}),
+	next: z.optional(z.never()),
+});
+
+export const {{$name}}ListFullTransitionSchema = z.object({
+    dlta: z.optional(z.never()),
+	prev: z.optional({{$name}}Schema),
+	next: z.optional({{$name}}Schema),
+}).check(ctx => {
+	if (("prev" in ctx.value) && ("next" in ctx.value)) {
+		const prevId = ctx.value.prev?.id;
+		const nextId = ctx.value.next?.id;
+		if (!prevId || !nextId || prevId !== nextId) {
+            ctx.issues.push({
+                code: "custom",
+                message: "prev and next ids must match",
+                values: [prevId, nextId],
+                input: ctx.value,
+            });
+        }
+    }
+});
+
+export const {{$name}}DeltaSchema = z.object({
+        {{- range $_, $field := $fields}}
+            {{- $isExportable := true }}
+            {{- range $meta := $field.Meta }}
+                {{- if exists $meta "json" }}
+                    {{- if eq (printf "%v" (get $meta "json")) "-" }}
+                        {{- $isExportable = false}}
+                    {{- end }}
+                {{- end }}
+            {{- end }}
+
+            {{- if $isExportable }}
+                {{template "fieldName" dict "Field" .}}: {{if ne $field.Name "id"}}z.optional({{end}}{{template "zodType" dict "Type" $field.Type "TypeMap" $typeMap}}{{if ne $field.Name "id"}}){{end}},
+            {{- end }}
+        {{- end}}
+});
+
+export const {{$name}}DeltaTransitionSchema = z.object({
+	dlta: z.literal(true),
+	prev: {{$name}}DeltaSchema,
+	next: {{$name}}DeltaSchema,
+}).check(ctx => {
+    if (("prev" in ctx.value) && ("next" in ctx.value)) {
+        const prevId = ctx.value.prev.id;
+        const nextId = ctx.value.next.id;
+        if (prevId !== nextId) {
+            ctx.issues.push({
+                code: "custom",
+                message: "prev and next ids must match",
+                values: [prevId, nextId],
+                input: ctx.value,
+            });
+        }
+    }
+});
+
+export const {{$name}}SingleTransitionSchema = z.union([
+    {{$name}}SingleAliveTransitionSchema, {{$name}}DelTransitionSchema, {{$name}}DeltaTransitionSchema,
+]);
+
+export const {{$name}}ListTransitionSchema = z.union([
+    {{$name}}ListFullTransitionSchema, {{$name}}DeltaTransitionSchema,
+]);
+    {{- end }}
+{{- end }}
+
+{{ $_ := unset $todoTypes $name }}
+{{- end }}
+

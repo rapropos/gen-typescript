@@ -1,19 +1,19 @@
 {{define "tqk"}}
 // TQK IN
-{{- $watchMethod := .watchMethod }}
+{{- $method := .Method }}
 {{- $methodMap := .MethodMap }}
 {{- $typeMap := .TypeMap}}
 
-{{- $baseName := trimPrefix $watchMethod.Name "Watch" }}
+{{- $baseName := trimPrefix $method.Name "Watch" }}
 {{- $tsbn := firstLetterToLower $baseName }}
 
-{{- $hasInput := gt (len $watchMethod.Inputs) 0}}
+{{- $hasInput := gt (len $method.Inputs) 0}}
 
 export const {{$tsbn}}Verb = "{{$baseName}}";
 
 {{- if $hasInput }}
 
-    {{- if ne $baseName $watchMethod.Name }}
+    {{- if ne $baseName $method.Name }}
 export type {{$baseName}}Args = Watch{{$baseName}}Args;
     {{- end }}
 
