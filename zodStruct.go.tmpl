@@ -24,7 +24,7 @@
     {{- end }}
 {{- end }}
 
-export const {{$name}}Schema = z.object({
+export const {{$name}} = z.object({
 {{- range $_, $field := $fields}}
     {{- $isExportable := true }}
     {{- range $meta := $field.Meta }}
@@ -41,7 +41,7 @@ export const {{$name}}Schema = z.object({
 {{- end}}
 });
 
-export const {{$name}}RequiredSchema = z.object({
+export const {{$name}}Required = z.object({
 {{- range $_, $field := $fields}}
     {{- $isExportable := true }}
     {{- range $meta := $field.Meta }}
@@ -57,7 +57,7 @@ export const {{$name}}RequiredSchema = z.object({
     {{- end }}
 {{- end}}
 });
-export type {{$name}}Required = z.infer<typeof {{$name}}RequiredSchema>;
+export type {{$name}}Required = z.infer<typeof {{$name}}Required>;
 
 {{- if hasKey $watchedTypes $name }}
     {{- $fieldNames := dict }}
@@ -67,21 +67,21 @@ export type {{$name}}Required = z.infer<typeof {{$name}}RequiredSchema>;
     {{- end }}
 
     {{- if hasKey $fieldNames "id" }}
-export const {{$name}}SingleAliveTransitionSchema = z.object({
+export const {{$name}}SingleAliveTransition = z.object({
     dlta: z.optional(z.never()),
-    next: {{$name}}Schema,
+    next: {{$name}},
 });
 
-export const {{$name}}DelTransitionSchema = z.object({
+export const {{$name}}DelTransition = z.object({
     dlta: z.optional(z.never()),
 	prev: z.object({id: z.string()}),
 	next: z.optional(z.never()),
 });
 
-export const {{$name}}ListFullTransitionSchema = z.object({
+export const {{$name}}ListFullTransition = z.object({
     dlta: z.optional(z.never()),
-	prev: z.optional({{$name}}Schema),
-	next: z.optional({{$name}}Schema),
+	prev: z.optional({{$name}}),
+	next: z.optional({{$name}}),
 }).check(ctx => {
 	if (("prev" in ctx.value) && ("next" in ctx.value)) {
 		const prevId = ctx.value.prev?.id;
@@ -97,7 +97,7 @@ export const {{$name}}ListFullTransitionSchema = z.object({
     }
 });
 
-export const {{$name}}DeltaSchema = z.object({
+export const {{$name}}Delta = z.object({
         {{- range $_, $field := $fields}}
             {{- $isExportable := true }}
             {{- range $meta := $field.Meta }}
@@ -114,10 +114,10 @@ export const {{$name}}DeltaSchema = z.object({
         {{- end}}
 });
 
-export const {{$name}}DeltaTransitionSchema = z.object({
+export const {{$name}}DeltaTransition = z.object({
 	dlta: z.literal(true),
-	prev: {{$name}}DeltaSchema,
-	next: {{$name}}DeltaSchema,
+	prev: {{$name}}Delta,
+	next: {{$name}}Delta,
 }).check(ctx => {
     if (("prev" in ctx.value) && ("next" in ctx.value)) {
         const prevId = ctx.value.prev.id;
@@ -133,12 +133,12 @@ export const {{$name}}DeltaTransitionSchema = z.object({
     }
 });
 
-export const {{$name}}SingleTransitionSchema = z.union([
-    {{$name}}SingleAliveTransitionSchema, {{$name}}DelTransitionSchema, {{$name}}DeltaTransitionSchema,
+export const {{$name}}SingleTransition = z.union([
+    {{$name}}SingleAliveTransition, {{$name}}DelTransition, {{$name}}DeltaTransition,
 ]);
 
-export const {{$name}}ListTransitionSchema = z.union([
-    {{$name}}ListFullTransitionSchema, {{$name}}DeltaTransitionSchema,
+export const {{$name}}ListTransition = z.union([
+    {{$name}}ListFullTransition, {{$name}}DeltaTransition,
 ]);
     {{- end }}
 {{- end }}

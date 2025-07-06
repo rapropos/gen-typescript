@@ -4,13 +4,12 @@
 {{ $fields := .Fields }}
 {{ $todoTypes := .TodoTypes }}
 
-export const {{$name}}Schema = z.enum([
+export const {{$name}} = z.enum([
     {{- range $i, $field := $fields}}
     "{{$field.Name}}",
     {{- end}}
 ]);
-export type {{$name}} = z.infer<typeof {{$name}}Schema>;
-export const {{$name}}s = {{$name}}Schema.enum;
+export type {{$name}} = z.infer<typeof {{$name}}>;
 
 {{ $_ := unset $todoTypes $name }}
 {{- end }}

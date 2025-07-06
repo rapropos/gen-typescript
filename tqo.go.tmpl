@@ -76,9 +76,10 @@ export function use{{$baseName}}(args?: {{$baseName}}Args) {
                     {{- if $hasByIdWatcher }}
 export function useFull{{$baseName}}(args?: {{$baseName}}Args) {
     const mama = useMothership();
-	const {data: stubs} = use{{$baseName}}(args);
+    const stubsTqrv = use{{$baseName}}(args);
+    let dataUpdatedAt = stubsTqrv.dataUpdatedAt;
 
-	const qos = (stubs ?? []).map(stub => {
+	const qos = (stubsTqrv.data ?? []).map(stub => {
         const ribArgs = {
             {{- $ribFetchFieldName}}Id: stub.id} as const;
         return {
@@ -103,10 +104,15 @@ export function useFull{{$baseName}}(args?: {{$baseName}}Args) {
         }
     }, [qks, refreshManager, watchingQks]);
 
-    return useQueries({
+    const uqsrv = useQueries({
         queries: qos,
         combine: mergeUseQueriesWithInfill,
     });
+    if (isAfter(uqsrv.dataUpdatedAt, dataUpdatedAt)) {
+        dataUpdatedAt = uqsrv.dataUpdatedAt;
+    }
+
+    return {...uqsrv, dataUpdatedAt};
 }
                     {{- end }}{{/* no ribfetcher */}}
 {{-             else }}{{/* no input */}}
@@ -127,9 +133,10 @@ export function use{{$baseName}}() {
 
 export function useFull{{$baseName}}() {
     const mama = useMothership();
-	const {data: stubs} = use{{$baseName}}();
+	const stubsTqrv = use{{$baseName}}();
+	let dataUpdatedAt = stubsTqrv.dataUpdatedAt;
 
-	const qos = (stubs ?? []).map(stub => {
+	const qos = (stubsTqrv.data ?? []).map(stub => {
         const ribArgs = {
             {{- $ribFetchFieldName}}Id: stub.id} as const;
         return {
@@ -154,10 +161,15 @@ export function useFull{{$baseName}}() {
         }
     }, [qks, refreshManager, watchingQks]);
 
-    return useQueries({
+    const uqsrv = useQueries({
         queries: qos,
         combine: mergeUseQueriesWithInfill,
     });
+    if (isAfter(uqsrv.dataUpdatedAt, dataUpdatedAt)) {
+        dataUpdatedAt = uqsrv.dataUpdatedAt;
+    }
+
+    return {...uqsrv, dataUpdatedAt};
 }
 {{-             end }}
 {{-         else }}{{/* not a slice */}}
@@ -182,15 +194,21 @@ export function use{{$baseName}}(args ?: {{$baseName}}Args) {
 
 export function useFull{{$baseName}}(args ?: {{$baseName}}Args) {
     const mama = useMothership();
-    const {data: stub} = use{{$baseName}}(args);
-	const ribArgs = stub ? { {{$ribFetchFieldName}}Id: stub.id } as const : undefined;
+    const stubTqrv = use{{$baseName}}(args);
+    let dataUpdatedAt = stubTqrv.dataUpdatedAt;
+	const ribArgs = stubTqrv.data ? { {{$ribFetchFieldName}}Id: stubTqrv.data.id } as const : undefined;
 
-	return useRefreshable{{if $infallible}}Infallible{{end}}Query({
+	const ribTqrv = useRefreshable{{if $infallible}}Infallible{{end}}Query({
 		queryKey: {{$ribFetchFieldName}}ByIdTqk(ribArgs),
 		queryFn: ribArgs
             ? () => {{ template "tqfn" dict "Method" $byIdWatcherMethod "MethodMap" $methodMap "argsVarName" "ribArgs" }}
             : skipToken,
     });
+	if (isAfter(ribTqrv.dataUpdatedAt, dataUpdatedAt)) {
+		dataUpdatedAt = ribTqrv.dataUpdatedAt;
+    }
+
+	return {...ribTqrv, dataUpdatedAt};
 }
 {{-             else }}
 // {{$baseName}} takes no arguments

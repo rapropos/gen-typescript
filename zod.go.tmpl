@@ -69,39 +69,11 @@ function applyPatch<T extends Ided>(prev: T, trans: Transition<Partial<T>>): Par
 	return rv;
 }
 
-type SealedLetter<Envelope extends PropertyKey, LetterT> = Record<Envelope, LetterT>;
-
-function replaceLetter<const Envelope extends PropertyKey, const LetterT>(orig: SealedLetter<Envelope, LetterT>, nv: LetterT): SealedLetter<Envelope, LetterT> {
-	const k0 = Object.keys(orig)[0];
-	const rv = Object.fromEntries([[k0, nv]]) as SealedLetter<Envelope, LetterT>;
-	return rv;
+function isNukePacket(wpkt: WiredSetlistPacket) {
+	return (!("prev" in wpkt) || !wpkt.prev) && (!("next" in wpkt) || !wpkt.next);
 }
 
-function patchSingleLetter<Envelope extends string, LetterT extends Ided>(orig: SealedLetter<Envelope, LetterT>, trans: Transition<Partial<LetterT>>): SealedLetter<Envelope, Partial<LetterT>> {
-	const k0 = Object.keys(orig)[0] as Envelope;
-	const prevLetter = orig[k0];
-	const nextLetter = applyPatch(prevLetter, trans);
-	const next = replaceLetter(orig, nextLetter);
-	return next;
-}
-
-function patchMultiLetter<Envelope extends string, LetterElemT extends Ided>(orig: SealedLetter<Envelope, LetterElemT[]>, trans: Transition<Partial<LetterElemT>>): SealedLetter<Envelope, Partial<LetterElemT>[]> | undefined {
-	const k0 = Object.keys(orig)[0] as Envelope;
-	const prevLetter = orig[k0];
-	const wantedId = trans.next.id;
-	if (!wantedId) {
-		throw new Error(`malformed transition ${JSON.stringify(trans)}`);
-	}
-	const xix = prevLetter.findIndex(maybe => maybe.id === wantedId);
-	if (xix === -1) {
-		return undefined;
-	}
-	const nextElem = applyPatch(prevLetter[xix], trans);
-	const nextLetter: Partial<LetterElemT>[] = structuredClone(prevLetter);
-	nextLetter[xix] = nextElem;
-	const next = replaceLetter(orig, nextLetter);
-	return next;
-}
+const Ided = z.object({id: z.string()});
 
 {{- if $types }}
     {{- range $_, $type := $types }}
@@ -122,8 +94,8 @@ export const RpcTypeMap = {
     {{- range $_, $type := $types }}
         {{$type.Name}}: {
 			name: "{{$type.Name}}",
-			schema: {{$type.Name}}Schema,
-			deltaTransitionSchema: {{ if hasKey $watchedTypes $type.Name }}{{$type.Name}}DeltaTransitionSchema{{else}}undefined{{end}},
+			schema: {{$type.Name}},
+			deltaTransitionSchema: {{ if hasKey $watchedTypes $type.Name }}{{$type.Name}}DeltaTransition{{else}}undefined{{end}},
         },
     {{- end }}
 } as const;
@@ -158,8 +130,8 @@ export const RpcVerbMap = {
 			{{- end }}
 			{{- $returnSingleton := "DEADBEEF" }}
 			{{- $returnPayloadType := "DEADBEEF" }}
-			{{- $returnEnvelope := "" }}
-			{{- $returnElemTypeName := "" }}
+			{{- $returnEnvelope := "DEADBEEF" }}
+			{{- $returnElemTypeName := "DEADBEEF" }}
 			{{- $setlistPayloadType := "DEADBEEF" }}
 			{{- $multiplicity := "" }}
 			{{- $returnSchema := "z.never()" }}
@@ -171,21 +143,22 @@ export const RpcVerbMap = {
 				{{- $returnElemTypeName = trimPrefix $returnSingleton.Type.Expr "[]" }}
 				{{- if hasKey $typeMap $returnElemTypeName }}
 					{{ $returnElemTypeName = get $typeMap $returnElemTypeName }}
-k				{{- end }}
+				{{- end }}
 				{{- if isListType $returnPayloadType }}
 					{{- $setlistPayloadType = $returnPayloadType.List.Elem }}
 				{{- else }}
 					{{- $setlistPayloadType = $returnPayloadType }}
 				{{- end }}
 				{{- $multiplicity = ternary (eq $returnElemTypeName $returnSingleton.Type.Expr) "single" "multi" }}
-				{{- $returnSchema = print $method.Name "ReturnSchema" }}
+				{{- $returnSchema = print $method.Name "Return" }}
 			{{- end }}
 			{{- $hasInput := gt (len $method.Inputs) 0 }}
 
-			{{$verb}}: {
+		{{$verb}}: {
 			{{- if $hasInput}}
-			argsSchema: {{$method.Name}}ArgsSchema,
-			tqkSchema: z.tuple([z.literal("{{$verb}}"), z.optional({{$method.Name}}ArgsSchema)]),
+			argsSchema: {{$method.Name}}Args,
+			tqkSchema: z.tuple([z.literal("{{$verb}}"), {{$method.Name}}Args]),
+			optionalArgTqkSchema: z.tuple([z.literal("{{$verb}}"), z.optional({{$method.Name}}Args)]),
 			{{- else }}
 			argsSchema: z.never(),
 			tqkSchema: z.tuple([z.literal("{{$verb}}")]),
@@ -193,33 +166,17 @@ k				{{- end }}
 
 			returnEnvelope: "{{$returnEnvelope}}",
 			returnSchema: {{$returnSchema}},
-			multiplicity: "{{$multiplicity}}",
 
 			{{- if $hasOutput }}
 			unwrapReturn: (rpc: {{$method.Name}}Return) => rpc.{{$returnEnvelope}},
-			returnLetterSchema: {{template "zodType" dict "Type" $returnSingleton.Type "TypeMap" $coreZxprMap }},
-			returnLetterTypeName: "{{$returnElemTypeName}}",
-				{{- if $isWatcher}}
-			patchReturn: (prev: {{$method.Name}}ReturnRequired, trans: Transition<Partial<{{$returnElemTypeName}}>>): {{$method.Name}}ReturnRequired => {
-				return {{$method.Name}}ReturnRequiredSchema.parse(patch{{firstLetterToUpper $multiplicity}}Letter(prev, trans));
-			},
-			setlistPayloadSchema: {{template "zodType" dict "Type" $setlistPayloadType "TypeMap" $coreZxprMap }},
-			setlistPayloadTypeName: "{{$setlistPayloadType.Expr}}",
-				{{- else }}
-			patchReturn: () => undefined,
-			setlistPayloadSchema: z.never(),
-			setlistPayloadTypeName: undefined,
-				{{- end}}
+//			returnLetterSchema: {{template "zodType" dict "Type" $returnSingleton.Type "TypeMap" $coreZxprMap }},
+//			returnLetterTypeName: "{{$returnElemTypeName}}",
 			{{- else }}
 			unwrapReturn: () => undefined,
-			returnLetterSchema: z.never(),
-			returnLetterTypeName: undefined,
-			patchReturn: () => undefined,
-			setlistPayloadSchema: z.never(),
-			setlistPayloadTypeName: undefined,
+//			returnLetterSchema: z.never(),
+//			returnLetterTypeName: undefined,
 			{{- end }}
-
-			},
+		},
 		{{- end }}
 	{{- end }}
 } as const;
@@ -229,7 +186,109 @@ export type ArgsSchemaFor<Verb extends RpcVerb> = typeof RpcVerbMap[Verb] extend
 export type ReturnSchemaFor<Verb extends RpcVerb> = typeof RpcVerbMap[Verb] extends { returnSchema: unknown }
 	? typeof RpcVerbMap[Verb]["returnSchema"] : never;
 export type TqKey<Verb extends RpcVerb> = z.infer<typeof RpcVerbMap[Verb]["tqkSchema"]>;
-export type SetlistPayloadFor<Verb extends RpcVerb> = z.infer<typeof RpcVerbMap[Verb]["setlistPayloadSchema"]>;
+
+export const setlistPacketConsumersByVerb = {
+	{{- range $_, $svc := $services }}
+		{{- range $_, $method := $svc.Methods }}
+			{{- if and (gt (len $method.Outputs) 0) (hasPrefix $method.Name "Watch") }}
+				{{- $cacheEntryTypeName := print $method.Name "Return"	}}
+				{{- $verb := trimPrefix $method.Name "Watch" }}
+				{{- $returnSingleton := index $method.Outputs 0 }}
+				{{- $returnPayloadType := $returnSingleton.Type }}
+				{{- $returnEnvelope := $returnSingleton.Name }}
+				{{- $returnElemTypeName := trimPrefix $returnSingleton.Type.Expr "[]" }}
+				{{- if hasKey $typeMap $returnElemTypeName }}
+					{{ $returnElemTypeName = get $typeMap $returnElemTypeName }}
+				{{- end }}
+				{{- $setlistPayloadType := "DEADBEEF" }}
+				{{- $multiplicity := "" }}
+				{{- if isListType $returnPayloadType }}
+					{{- $setlistPayloadType = $returnPayloadType.List.Elem }}
+					{{- $multiplicity = "multi" }}
+				{{- else }}
+					{{- $setlistPayloadType = $returnPayloadType }}
+					{{- $multiplicity = "single" }}
+				{{- end }}
+				{{- $setlistPayloadSchema := print $returnElemTypeName }}
+				{{- $returnSchema := print $method.Name "Return" }}
+				{{- $hasInput := gt (len $method.Inputs) 0 }}
+	{{$verb}}: (tqc: QueryClient, rawTqk: QueryKey, rawPacket: WiredSetlistPacket) => {
+		const vrec = RpcVerbMap["{{$verb}}"];
+		const tqk = vrec.tqkSchema.parse(rawTqk);
+		type CacheEntryT = {{$cacheEntryTypeName}};
+		const deltaSchema = RpcTypeMap["{{$returnElemTypeName}}"].deltaTransitionSchema;
+		const deltaZprv = deltaSchema.safeParse(rawPacket);
+		const cacheEntry = tqc.getQueryData<CacheEntryT>(tqk);
+		const cachePayload = cacheEntry ? cacheEntry.{{$returnEnvelope}} : undefined;
+		const seal = (letter: unknown) => vrec.returnSchema.parse({ {{- $returnEnvelope -}}: letter});
+
+				{{- if eq $multiplicity "single" }}
+		const patchedNext = !!cachePayload && deltaZprv.success
+			? {{$setlistPayloadSchema}}.parse(applyPatch(cachePayload, deltaZprv.data))
+			: undefined;
+
+		if (!("next" in rawPacket) || !rawPacket.next
+			|| (deltaZprv.success && !patchedNext)) {
+			void tqc.invalidateQueries({queryKey: tqk});
+		}
+		// at this point, three possible things can be happening:
+		// - an addition
+		// - a full replace
+		// - a delta that has been inflated
+		const next = patchedNext ?? {{$setlistPayloadSchema}}.parse(rawPacket.next);
+		const sealedNext = seal(next);
+		tqc.setQueryData<CacheEntryT>(tqk, sealedNext);
+				{{- else }}{{/* is a list */}}
+		if (isNukePacket(rawPacket)) {
+			void tqc.invalidateQueries({queryKey: tqk});
+		}
+
+		if ("prev" in rawPacket && rawPacket.prev && !("next" in rawPacket)) {
+			// a delete
+			const prevId = Ided.parse(rawPacket.prev).id;
+			if (cachePayload) {
+				const next = cachePayload.filter(maybe => maybe.id !== prevId);
+				const sealedNext = seal(next);
+				tqc.setQueryData<CacheEntryT>(tqk, sealedNext);
+			}
+		} else {
+			// at this point, next must exist and we have the same three-pronged situation.
+			// we need set behavior, so we don't blindly add things that we are told to add.
+			// so basically we are updating our entry with the relevant id or adding a new
+			// one if we don't find one.
+
+			const wantedId = Ided.parse(rawPacket.next).id;
+			let found = false;
+			const next: {{$returnElemTypeName}}[] = [];
+			for (const elem of (cachePayload ?? [])) {
+				if (elem.id === wantedId) {
+					const newElem = {{$setlistPayloadSchema}}.parse(
+						deltaZprv.success ? applyPatch(elem, deltaZprv.data) : rawPacket.next);
+					next.push(newElem);
+					found = true;
+				} else {
+					next.push(elem);
+				}
+			}
+
+			if (!found) {
+				if (deltaZprv.success) {
+					// no bueno, we have nothing to patch from
+					void tqc.invalidateQueries({queryKey: tqk});
+				}
+				const newElem = {{$setlistPayloadSchema}}.parse(rawPacket.next);
+				next.push(newElem);
+			}
+
+			const sealedNext = seal(next);
+			tqc.setQueryData<CacheEntryT>(tqk, sealedNext);
+		}
+				{{- end }}
+	},
+			{{- end }}
+		{{- end }}
+	{{- end }}
+} as const;
 
 {{- end }}
 
