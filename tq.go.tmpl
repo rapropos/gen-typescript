@@ -10,12 +10,18 @@
 /** TQK **/
 import {queryOptions, Query, DefaultError, QueryClient, QueryKey,
 	useQueries, skipToken} from "@tanstack/react-query";
-import {useMothership} from "./mama";
-import {useRefreshSet, useRefreshable{{if $infallible}}Infallible{{end}}Query,
-	mergeUseQueriesWithInfill} from "../tqutil";
+import {mergeUseQueriesWithInfill} from "../util/mergeUseQueriesWithInfill.tsx";
+import {useRefreshableInfallibleQuery, useRefreshSet} from "../util/tqrefresh.tsx";
 import {isDeepEqual} from "remeda";
-import {useEffect, useState} from "react";
+import {useEffect, useState, createContext, useContext} from "react";
 import {isAfter} from "date-fns";
+
+export const MamaContext = createContext<KingBasuraService>({} as KingBasuraService);
+
+export function useMothership() {
+	const rv = useContext(MamaContext);
+	return rv;
+}
 
 export type VerbedQueryKey = [string, ...unknown[]];
 
