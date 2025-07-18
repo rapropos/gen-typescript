@@ -77,7 +77,7 @@ export function use{{$baseName}}(args?: {{$baseName}}Args) {
 export function useFull{{$baseName}}(args?: {{$baseName}}Args) {
     const mama = useMothership();
     const stubsTqrv = use{{$baseName}}(args);
-    let dataUpdatedAt = stubsTqrv.dataUpdatedAt;
+//    let dataUpdatedAt = stubsTqrv.dataUpdatedAt;
 
 	const qos = (stubsTqrv.data ?? []).map(stub => {
         const ribArgs = {
@@ -104,20 +104,26 @@ export function useFull{{$baseName}}(args?: {{$baseName}}Args) {
         }
     }, [qks, refreshManager, watchingQks]);
 
+	/* having combine be constant even if the spine query has not settled yet
+	 * seemed to be causing problems whereby success with empty arrays was
+	 * getting through
+	 */
     const uqsrv = useQueries({
-        queries: qos,
-        combine: mergeUseQueriesWithInfill,
-    });
+		queries: qos,
+		combine: !!args && !!stubsTqrv.isSuccess ? mergeUseQueriesWithInfill : undefined,
+	});
 
-	if (!args) {
+	if (!args || stubsTqrv.isPending) {
 	    return pendingUseResult;
     }
 
-    if (isAfter(uqsrv.dataUpdatedAt, dataUpdatedAt)) {
-        dataUpdatedAt = uqsrv.dataUpdatedAt;
-    }
+	return uqsrv;
 
-    return {...uqsrv, dataUpdatedAt};
+    // if (!!combine && isAfter(uqsrv.dataUpdatedAt, dataUpdatedAt)) {
+    //    dataUpdatedAt = uqsrv.dataUpdatedAt;
+    // }
+
+    // return {...uqsrv, dataUpdatedAt};
 }
                     {{- end }}{{/* no ribfetcher */}}
 {{-             else }}{{/* no input */}}
@@ -139,7 +145,7 @@ export function use{{$baseName}}() {
 export function useFull{{$baseName}}() {
     const mama = useMothership();
 	const stubsTqrv = use{{$baseName}}();
-	let dataUpdatedAt = stubsTqrv.dataUpdatedAt;
+	// let dataUpdatedAt = stubsTqrv.dataUpdatedAt;
 
 	const qos = (stubsTqrv.data ?? []).map(stub => {
         const ribArgs = {
@@ -166,15 +172,17 @@ export function useFull{{$baseName}}() {
         }
     }, [qks, refreshManager, watchingQks]);
 
-    const uqsrv = useQueries({
-        queries: qos,
-        combine: mergeUseQueriesWithInfill,
-    });
-    if (isAfter(uqsrv.dataUpdatedAt, dataUpdatedAt)) {
-        dataUpdatedAt = uqsrv.dataUpdatedAt;
-    }
+    /* having combine be constant even if the spine query has not settled yet
+     * seemed to be causing problems whereby success with empty arrays was
+     * getting through
+     */
+     const uqsrv = useQueries({
+		 queries: qos,
+		 combine: stubsTqrv.isSuccess ? mergeUseQueriesWithInfill : undefined,
+	 });
 
-    return {...uqsrv, dataUpdatedAt};
+     // return {...uqsrv, dataUpdatedAt};
+	 return uqsrv;
 }
 {{-             end }}
 {{-         else }}{{/* not a slice */}}
