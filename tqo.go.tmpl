@@ -108,6 +108,11 @@ export function useFull{{$baseName}}(args?: {{$baseName}}Args) {
         queries: qos,
         combine: mergeUseQueriesWithInfill,
     });
+
+	if (!args) {
+	    return pendingUseResult;
+    }
+
     if (isAfter(uqsrv.dataUpdatedAt, dataUpdatedAt)) {
         dataUpdatedAt = uqsrv.dataUpdatedAt;
     }
