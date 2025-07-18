@@ -230,6 +230,7 @@ export const setlistPacketConsumersByVerb = {
 		if (!("next" in rawPacket) || !rawPacket.next
 			|| (deltaZprv.success && !patchedNext)) {
 			void tqc.invalidateQueries({queryKey: tqk});
+			return
 		}
 		// at this point, three possible things can be happening:
 		// - an addition
