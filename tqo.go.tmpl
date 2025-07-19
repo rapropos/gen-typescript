@@ -108,10 +108,11 @@ export function useFull{{$baseName}}(args?: {{$baseName}}Args) {
 	 * seemed to be causing problems whereby success with empty arrays was
 	 * getting through
 	 */
-    const uqsrv = useQueries({
+    const uqsrv = useQueries(args && stubsTqrv.isSuccess
+	? {
 		queries: qos,
-		combine: !!args && !!stubsTqrv.isSuccess ? mergeUseQueriesWithInfill : undefined,
-	});
+		combine: mergeUseQueriesWithInfill,
+	} : {queries: NADA});
 
 	if (!args || stubsTqrv.isPending) {
 	    return pendingUseResult;
@@ -176,12 +177,18 @@ export function useFull{{$baseName}}() {
      * seemed to be causing problems whereby success with empty arrays was
      * getting through
      */
-     const uqsrv = useQueries({
+     const uqsrv = useQueries(stubsTqrv.isSuccess
+	 ? {
 		 queries: qos,
-		 combine: stubsTqrv.isSuccess ? mergeUseQueriesWithInfill : undefined,
-	 });
+		 combine: mergeUseQueriesWithInfill,
+	 } : {queries: NADA});
 
-     // return {...uqsrv, dataUpdatedAt};
+
+    if (stubsTqrv.isPending) {
+        return pendingUseResult;
+    }
+
+    // return {...uqsrv, dataUpdatedAt};
 	 return uqsrv;
 }
 {{-             end }}
