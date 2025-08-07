@@ -156,11 +156,13 @@ export const RpcVerbMap = {
 
 		{{$verb}}: {
 			{{- if $hasInput}}
+			hasInput: true,
 			argsSchema: {{$method.Name}}Args,
 			tqkSchema: z.tuple([z.literal("{{$verb}}"), {{$method.Name}}Args]),
 			optionalArgTqkSchema: z.tuple([z.literal("{{$verb}}"), z.optional({{$method.Name}}Args)]),
 			{{- else }}
-			argsSchema: z.never(),
+			hasInput: false,
+			argsSchema: z.undefined(),
 			tqkSchema: z.tuple([z.literal("{{$verb}}")]),
 			{{end}}
 
