@@ -1,14 +1,14 @@
-{{define "types"}}
+{{- define "types" -}}
 
 {{- $typeMap := .TypeMap -}}
 {{- $types := .Types -}}
 {{- $services := .Services -}}
 {{- $enums := .enums -}}
+{{- $opts := .Opts -}}
 
 //
-// Types
+// Schema types
 //
-
 {{if $types -}}
 {{range $_i, $type := $types -}}
 
@@ -38,28 +38,32 @@ export interface {{$type.Name}} {
   {{- end}}
 }
 {{end -}}
-{{end -}}
-{{end -}}
+{{- end -}}
+{{- end -}}
 
-{{if $services}}
+{{/* Request/response generated types */}}
+{{- if $services}}
 {{- range $_, $service := $services}}
 {{ template "serviceInterface" dict "Service" $service }}
 
 {{range $_, $method := $service.Methods -}}
 export interface {{$method.Name}}Args {
+{{range $_, $method := $service.Methods}}
+{{- if eq $method.Succinct false -}}
+export interface {{$method.Name}}{{if $opts.compat}}Args{{else}}Request{{end}} {
 {{- range $_, $input := $method.Inputs}}
   {{$input.Name}}{{if $input.Optional}}?{{end}}: {{template "type" dict "Type" $input.Type "TypeMap" $typeMap}}
 {{- end}}
 }
 
-export interface {{$method.Name}}Return {
+export interface {{$method.Name}}{{if $opts.compat}}Return{{else}}Response{{end}} {
 {{- range $_, $output := $method.Outputs}}
   {{$output.Name}}{{if $output.Optional}}?{{end}}: {{template "type" dict "Type" $output.Type "TypeMap" $typeMap}}
 {{- end}}
 }
 {{end}}
-
-{{- end}}
 {{end -}}
 
-{{end}}
+{{- end -}}
+{{- end -}}
+{{- end -}}
