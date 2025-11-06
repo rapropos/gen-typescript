@@ -28,7 +28,9 @@ export class {{$service.Name}} implements {{$service.Name}}Client {
   {{- range $i, $method := $service.Methods}}
     {{- $methodReqName := "" -}}
     {{- if $method.Succinct -}}
+	{{- if $method.Inputs | len }}
       {{- $methodReqName = (index $method.Inputs 0).Type -}}
+	  {{- end }}
     {{- else -}}
       {{- if $opts.compat -}}
         {{- $methodReqName = printf "%sArgs" $method.Name -}}
@@ -44,8 +46,12 @@ export class {{$service.Name}} implements {{$service.Name}}Client {
   {{- $methodReqName := "" -}}
   {{- $methodRespName := "" -}}
   {{- if $method.Succinct -}}
+  	{{- if $method.Inputs | len }}
     {{- $methodReqName = (index $method.Inputs 0).Type -}}
+	{{- end }}
+	{{- if $method.Outputs | len }}
     {{- $methodRespName = (index $method.Outputs 0).Type -}}
+	{{- end }}
   {{- else -}}
     {{- if $opts.compat -}}
       {{- $methodReqName = printf "%sArgs" $method.Name -}}
