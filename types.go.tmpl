@@ -44,7 +44,6 @@ export interface {{$type.Name}} {
 {{/* Request/response generated types */}}
 {{- if $services}}
 {{- range $_, $service := $services}}
-{{ template "serviceInterface" dict "Service" $service }}
 
 {{range $_, $method := $service.Methods}}
 {{- if eq $method.Succinct false -}}
