@@ -14,10 +14,10 @@ export const {{$tsbn}}Verb = "{{$baseName}}";
 {{- if $hasInput }}
 
     {{- if ne $baseName $method.Name }}
-export type {{$baseName}}Args = Watch{{$baseName}}Args;
+export type {{$baseName}}Request = Watch{{$baseName}}Request;
     {{- end }}
 
-export function {{$tsbn}}Tqk(args?: {{$baseName}}Args) {
+export function {{$tsbn}}Tqk(args?: {{$baseName}}Request) {
     return args ? [{{$tsbn}}Verb, args] as const : [{{$tsbn}}Verb] as const;
 }
 {{- else }}

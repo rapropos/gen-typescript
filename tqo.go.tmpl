@@ -57,35 +57,35 @@
 // {{$outTypeName}} is a slice
 {{-             if $hasInput }}
 // {{$baseName}} can take arguments
-export function {{$tsmn}}Tqo(mama: {{$serviceName}}, args?: {{$baseName}}Args) {
+export function {{$tsmn}}Tqo(mama: {{$serviceName}}, args?: {{$baseName}}Request) {
     return queryOptions({
         queryKey: {{$tsbn}}Tqk(args),
         queryFn: args
             ? () => {{template "tqfn" dict "Method" $method "MethodMap" $methodMap }}
             : skipToken,
         {{if $infallible}}throwOnError: true,{{end}}
-		select: (data: {{$method.Name}}Return) => data.{{$out.Name}},
+		select: (data: {{$method.Name}}Response) => data.{{$out.Name}},
     });
 }
 
-export function use{{$baseName}}(args?: {{$baseName}}Args) {
-    const mama = useMothership();
+export function use{{$baseName}}(args?: {{$baseName}}Request) {
+    const mama = use{{$serviceName}}Mothership();
 	return useRefreshable{{if $infallible}}Infallible{{end}}Query({{$tsmn}}Tqo(mama, args));
 }
 
                     {{- if $hasByIdWatcher }}
-export function useFull{{$baseName}}(args?: {{$baseName}}Args) {
-    const mama = useMothership();
+export function useFull{{$baseName}}(args?: {{$baseName}}Request) {
+    const mama = use{{$serviceName}}Mothership();
     const stubsTqrv = use{{$baseName}}(args);
 //    let dataUpdatedAt = stubsTqrv.dataUpdatedAt;
 
 	const qos = (stubsTqrv.data ?? []).map(stub => {
-        const ribArgs = {
+        const ribRequest = {
             {{- $ribFetchFieldName}}Id: stub.id} as const;
         return {
-            queryKey: {{$ribFetchFieldName}}ByIdTqk(ribArgs),
-            queryFn: () => {{template "tqfn" dict "Method" $byIdWatcherMethod "MethodMap" $methodMap "argsVarName" "ribArgs"}},
-            select: (data: {{$byIdWatcherMethod.Name}}Return) => data.{{$byIdWatcherEnvelope}},
+            queryKey: {{$ribFetchFieldName}}ByIdTqk(ribRequest),
+            queryFn: () => {{template "tqfn" dict "Method" $byIdWatcherMethod "MethodMap" $methodMap "argsVarName" "ribRequest"}},
+            select: (data: {{$byIdWatcherMethod.Name}}Response) => data.{{$byIdWatcherEnvelope}},
 } as const;
     });
 
@@ -134,27 +134,27 @@ export function {{$tsmn}}Tqo(mama: {{$serviceName}}) {
         queryKey: {{$tsbn}}Tqk,
         queryFn: () => {{template "tqfn" dict "Method" $method "MethodMap" $methodMap }},
         {{if $infallible}}throwOnError: true,{{end}}
-        select: (data: {{$method.Name}}Return) => data.{{$out.Name}},
+        select: (data: {{$method.Name}}Response) => data.{{$out.Name}},
 });
 }
 
 export function use{{$baseName}}() {
-    const mama = useMothership();
+    const mama = use{{$serviceName}}Mothership();
 	return useRefreshable{{if $infallible}}Infallible{{end}}Query({{$tsmn}}Tqo(mama));
 }
 
 export function useFull{{$baseName}}() {
-    const mama = useMothership();
+    const mama = use{{$serviceName}}Mothership();
 	const stubsTqrv = use{{$baseName}}();
 	// let dataUpdatedAt = stubsTqrv.dataUpdatedAt;
 
 	const qos = (stubsTqrv.data ?? []).map(stub => {
-        const ribArgs = {
+        const ribRequest = {
             {{- $ribFetchFieldName}}Id: stub.id} as const;
         return {
-            queryKey: {{$ribFetchFieldName}}ByIdTqk(ribArgs),
-            queryFn: () => {{template "tqfn" dict "Method" $byIdWatcherMethod "MethodMap" $methodMap "argsVarName" "ribArgs"}},
-            select: (data: {{$byIdWatcherMethod.Name}}Return) => data.{{$byIdWatcherEnvelope}},
+            queryKey: {{$ribFetchFieldName}}ByIdTqk(ribRequest),
+            queryFn: () => {{template "tqfn" dict "Method" $byIdWatcherMethod "MethodMap" $methodMap "argsVarName" "ribRequest"}},
+            select: (data: {{$byIdWatcherMethod.Name}}Response) => data.{{$byIdWatcherEnvelope}},
         } as const;
     });
 
@@ -196,32 +196,32 @@ export function useFull{{$baseName}}() {
 // {{$outTypeName}} not a slice
 {{-             if $hasInput}}
 // {{$baseName}} can take args
-export function {{$tsmn}}Tqo(mama: {{$serviceName}}, args ?: {{$baseName}}Args) {
+export function {{$tsmn}}Tqo(mama: {{$serviceName}}, args ?: {{$baseName}}Request) {
     return queryOptions({
         queryKey: {{$tsbn}}Tqk(args),
         queryFn: args
             ? () => {{template "tqfn" dict "Method" $method "MethodMap" $methodMap }}
         : skipToken,
         {{if $infallible}}throwOnError: true,{{end}}
-        select: (data: {{$method.Name}}Return) => data.{{$out.Name}},
+        select: (data: {{$method.Name}}Response) => data.{{$out.Name}},
     });
 }
 
-export function use{{$baseName}}(args ?: {{$baseName}}Args) {
-    const mama = useMothership();
+export function use{{$baseName}}(args ?: {{$baseName}}Request) {
+    const mama = use{{$serviceName}}Mothership();
 	return useRefreshable{{if $infallible}}Infallible{{end}}Query({{$tsmn}}Tqo(mama, args));
 }
 
-export function useFull{{$baseName}}(args ?: {{$baseName}}Args) {
-    const mama = useMothership();
+export function useFull{{$baseName}}(args ?: {{$baseName}}Request) {
+    const mama = use{{$serviceName}}Mothership();
     const stubTqrv = use{{$baseName}}(args);
     let dataUpdatedAt = stubTqrv.dataUpdatedAt;
-	const ribArgs = stubTqrv.data ? { {{$ribFetchFieldName}}Id: stubTqrv.data.id } as const : undefined;
+	const ribRequest = stubTqrv.data ? { {{$ribFetchFieldName}}Id: stubTqrv.data.id } as const : undefined;
 
 	const ribTqrv = useRefreshable{{if $infallible}}Infallible{{end}}Query({
-		queryKey: {{$ribFetchFieldName}}ByIdTqk(ribArgs),
-		queryFn: ribArgs
-            ? () => {{ template "tqfn" dict "Method" $byIdWatcherMethod "MethodMap" $methodMap "argsVarName" "ribArgs" }}
+		queryKey: {{$ribFetchFieldName}}ByIdTqk(ribRequest),
+		queryFn: ribRequest
+            ? () => {{ template "tqfn" dict "Method" $byIdWatcherMethod "MethodMap" $methodMap "argsVarName" "ribRequest" }}
             : skipToken,
     });
 	if (isAfter(ribTqrv.dataUpdatedAt, dataUpdatedAt)) {
@@ -237,24 +237,24 @@ export function {{$tsmn}}Tqo(mama: {{$serviceName}}) {
         queryKey: {{$tsbn}}Tqk,
         queryFn: () => {{template "tqfn" dict "Method" $method "MethodMap" $methodMap }},
         {{if $infallible}}throwOnError: true,{{end}},
-        select: (data: {{$method.Name}}Return) => data.{{$out.Name}},
+        select: (data: {{$method.Name}}Response) => data.{{$out.Name}},
 	});
 }
 
 export function use{{$baseName}}() {
-    const mama = useMothership();
+    const mama = use{{$serviceName}}Mothership();
 	return useRefreshable{{if $infallible}}Infallible{{end}}Query({{$tsmn}}Tqo());
 }
 
 export function useFull{{$baseName}}() {
-	const mama = useMothership();
+	const mama = use{{$serviceName}}Mothership();
     const {data: stub} = use{{$baseName}}();
 
-    const ribArgs = stub ? { {{$ribFetchFieldName}}Id: stub.id } as const : undefined;
+    const ribRequest = stub ? { {{$ribFetchFieldName}}Id: stub.id } as const : undefined;
     return useRefreshable{{if $infallible}}Infallible{{end}}Query({
-        queryKey: {{$ribFetchFieldName}}ByIdTqk(ribArgs),
-        queryFn: ribArgs
-		    ? () => {{ template "tqfn" dict "Method" $byIdWatcherMethod "MethodMap" $methodMap "argsVarName" "ribArgs" }}
+        queryKey: {{$ribFetchFieldName}}ByIdTqk(ribRequest),
+        queryFn: ribRequest
+		    ? () => {{ template "tqfn" dict "Method" $byIdWatcherMethod "MethodMap" $methodMap "argsVarName" "ribRequest" }}
 			: skipToken,
     });
 }
@@ -265,19 +265,19 @@ export function useFull{{$baseName}}() {
 // {{$outTypeBaseName}} is not a stub
 {{-    if $hasInput }}
 // {{$baseName}} can take args
-export function {{$tsmn}}Tqo(mama: {{$serviceName}}, args ?: {{$baseName}}Args) {
+export function {{$tsmn}}Tqo(mama: {{$serviceName}}, args ?: {{$baseName}}Request) {
     return queryOptions({
         queryKey: {{$tsbn}}Tqk(args),
         queryFn: args
             ? () => {{template "tqfn" dict "Method" $method "MethodMap" $methodMap }}
             : skipToken,
         {{if $infallible}}throwOnError: true,{{end}}
-        {{if $hasOutput}}select: (data: {{$method.Name}}Return) => data.{{$out.Name}},{{end}}
+        {{if $hasOutput}}select: (data: {{$method.Name}}Response) => data.{{$out.Name}},{{end}}
     });
 }
 
-export function use{{$baseName}}(args ?: {{$baseName}}Args) {
-	const mama = useMothership();
+export function use{{$baseName}}(args ?: {{$baseName}}Request) {
+	const mama = use{{$serviceName}}Mothership();
 	return useRefreshable{{if $infallible}}Infallible{{end}}Query({{$tsmn}}Tqo(mama, args));
 }
 {{-    else }}{{/* no input */}}
@@ -287,12 +287,12 @@ export function {{$tsmn}}Tqo(mama: {{$serviceName}}) {
         queryKey: {{$tsbn}}Tqk,
         queryFn: () => {{template "tqfn" dict "Method" $method "MethodMap" $methodMap }},
         {{if $infallible}}throwOnError: true,{{end}}
-        {{if $hasOutput}}select: (data: {{$method.Name}}Return) => data.{{$out.Name}},{{end}}
+        {{if $hasOutput}}select: (data: {{$method.Name}}Response) => data.{{$out.Name}},{{end}}
     });
 }
 
 export function use{{$baseName}}() {
-    const mama = useMothership();
+    const mama = use{{$serviceName}}Mothership();
     return useRefreshable{{if $infallible}}Infallible{{end}}Query({{$tsmn}}Tqo(mama));
 }
 {{-    end }}

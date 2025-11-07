@@ -102,7 +102,7 @@ export const WebrpcSchemaHash = "{{.SchemaHash}}"
 
 {{- "\n\n" -}}
 
-{{template "types" dict "Types" .Types "Services" .Services "Opts" $opts "TypeMap" $typeMap}}
+{{- template "types" dict "Types" .Types "Services" .Services "TypeMap" $typeMap "enums" $opts.enums }}
 
 {{- "\n" -}}
 
@@ -125,6 +125,12 @@ export const WebrpcSchemaHash = "{{.SchemaHash}}"
 {{- "\n\n" -}}
 
 {{template "errors" dict "Services" .Services "WebrpcErrors" .WebrpcErrors "SchemaErrors" .Errors "Opts" $opts}}
+
+{{- if $opts.zod}}
+  {{- "\n\n" -}}
+
+  {{- template "zod" dict "Types" .Types "Services" .Services "TypeMap" $typeMap}}
+{{- end}}
 
 //
 // Webrpc
@@ -181,22 +187,5 @@ function parseWebrpcGenVersions(header: string): WebrpcGenVersions {
     schemaVersion: schemaVersion ?? "",
   };
 }
-
-{{- template "types" dict "Types" .Types "Services" .Services "TypeMap" $typeMap "enums" $opts.enums }}
-
-{{- if $opts.zod}}
-  {{- template "zod" dict "Types" .Types "Services" .Services "TypeMap" $typeMap}}
-{{- end}}
-
-{{- if $opts.client}}
-  {{template "client" dict "Services" .Services "Opts" $opts "TypeMap" $typeMap "Types" .Types}}
-
-  {{template "clientHelpers" dict "WebrpcErrors" .WebrpcErrors "SchemaErrors" .Errors "Opts" $opts }}
-{{- end}}
-
-{{- if $opts.server}}
-  {{template "server" dict "Services" .Services "Opts" $opts "TypeMap" $typeMap}}
-  {{template "serverHelpers" dict "Types" .Types "TypeMap" $typeMap}}
-{{- end}}
 
 {{- end}}

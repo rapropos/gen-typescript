@@ -108,12 +108,12 @@ export type RpcType = keyof typeof RpcTypeMap;
 			// method {{$meth}}
 			{{- if gt (len $meth.Inputs) 0 }}
 				{{- template "zodStruct" dict
-					"Name" (print $meth.Name "Args") "Fields" $meth.Inputs "TypeMap" $coreZxprMap
+					"Name" (print $meth.Name "Request") "Fields" $meth.Inputs "TypeMap" $coreZxprMap
 					"TodoTypes" $todoTypes "WatchedTypes" $watchedTypes }}
 			{{- end}}
 			{{- if gt (len $meth.Outputs) 0 }}
 				{{- template "zodStruct" dict
-					"Name" (print $meth.Name "Return") "Fields" $meth.Outputs "TypeMap" $coreZxprMap
+					"Name" (print $meth.Name "Response") "Fields" $meth.Outputs "TypeMap" $coreZxprMap
 					"TodoTypes" $todoTypes "WatchedTypes" $watchedTypes }}
 			{{- end}}
 		{{- end }}
@@ -128,53 +128,53 @@ export const RpcVerbMap = {
 				{{ $isWatcher = true }}
 				{{ $verb = trimPrefix $verb "Watch" }}
 			{{- end }}
-			{{- $returnSingleton := "DEADBEEF" }}
-			{{- $returnPayloadType := "DEADBEEF" }}
-			{{- $returnEnvelope := "DEADBEEF" }}
-			{{- $returnElemTypeName := "DEADBEEF" }}
+			{{- $responseSingleton := "DEADBEEF" }}
+			{{- $responsePayloadType := "DEADBEEF" }}
+			{{- $responseEnvelope := "DEADBEEF" }}
+			{{- $responseElemTypeName := "DEADBEEF" }}
 			{{- $setlistPayloadType := "DEADBEEF" }}
 			{{- $multiplicity := "" }}
-			{{- $returnSchema := "z.never()" }}
+			{{- $responseSchema := "z.never()" }}
 			{{- $hasOutput := gt (len $method.Outputs) 0 }}
 			{{- if $hasOutput }}
-				{{- $returnSingleton = index $method.Outputs 0 }}
-				{{- $returnPayloadType = $returnSingleton.Type }}
-				{{- $returnEnvelope = $returnSingleton.Name }}
-				{{- $returnElemTypeName = trimPrefix $returnSingleton.Type.Expr "[]" }}
-				{{- if hasKey $typeMap $returnElemTypeName }}
-					{{ $returnElemTypeName = get $typeMap $returnElemTypeName }}
+				{{- $responseSingleton = index $method.Outputs 0 }}
+				{{- $responsePayloadType = $responseSingleton.Type }}
+				{{- $responseEnvelope = $responseSingleton.Name }}
+				{{- $responseElemTypeName = trimPrefix $responseSingleton.Type.Expr "[]" }}
+				{{- if hasKey $typeMap $responseElemTypeName }}
+					{{ $responseElemTypeName = get $typeMap $responseElemTypeName }}
 				{{- end }}
-				{{- if isListType $returnPayloadType }}
-					{{- $setlistPayloadType = $returnPayloadType.List.Elem }}
+				{{- if isListType $responsePayloadType }}
+					{{- $setlistPayloadType = $responsePayloadType.List.Elem }}
 				{{- else }}
-					{{- $setlistPayloadType = $returnPayloadType }}
+					{{- $setlistPayloadType = $responsePayloadType }}
 				{{- end }}
-				{{- $multiplicity = ternary (eq $returnElemTypeName $returnSingleton.Type.Expr) "single" "multi" }}
-				{{- $returnSchema = print $method.Name "Return" }}
+				{{- $multiplicity = ternary (eq $responseElemTypeName $responseSingleton.Type.Expr) "single" "multi" }}
+				{{- $responseSchema = print $method.Name "Response" }}
 			{{- end }}
 			{{- $hasInput := gt (len $method.Inputs) 0 }}
 
 		{{$verb}}: {
 			{{- if $hasInput}}
 			hasInput: true,
-			argsSchema: {{$method.Name}}Args,
-			tqkSchema: z.tuple([z.literal("{{$verb}}"), {{$method.Name}}Args]),
-			optionalArgTqkSchema: z.tuple([z.literal("{{$verb}}"), z.optional({{$method.Name}}Args)]),
+			requestSchema: {{$method.Name}}Request,
+			tqkSchema: z.tuple([z.literal("{{$verb}}"), {{$method.Name}}Request]),
+			optionalArgTqkSchema: z.tuple([z.literal("{{$verb}}"), z.optional({{$method.Name}}Request)]),
 			{{- else }}
 			hasInput: false,
-			argsSchema: z.undefined(),
+			requestSchema: z.undefined(),
 			tqkSchema: z.tuple([z.literal("{{$verb}}")]),
 			{{end}}
 
-			returnEnvelope: "{{$returnEnvelope}}",
-			returnSchema: {{$returnSchema}},
+			returnEnvelope: "{{$responseEnvelope}}",
+			responseSchema: {{$responseSchema}},
 
-			{{- if $hasOutput }}
-			unwrapReturn: (rpc: {{$method.Name}}Return) => rpc.{{$returnEnvelope}},
-//			returnLetterSchema: {{template "zodType" dict "Type" $returnSingleton.Type "TypeMap" $coreZxprMap }},
-//			returnLetterTypeName: "{{$returnElemTypeName}}",
+			{{- if and $hasOutput (not $method.StreamOutput) }}
+			unwrapResponse: (rpc: {{$method.Name}}Response) => rpc.{{$responseEnvelope}},
+//			returnLetterSchema: {{template "zodType" dict "Type" $responseSingleton.Type "TypeMap" $coreZxprMap }},
+//			returnLetterTypeName: "{{$responseElemTypeName}}",
 			{{- else }}
-			unwrapReturn: () => undefined,
+			unwrapResponse: () => undefined,
 //			returnLetterSchema: z.never(),
 //			returnLetterTypeName: undefined,
 			{{- end }}
@@ -183,46 +183,46 @@ export const RpcVerbMap = {
 	{{- end }}
 } as const;
 export type RpcVerb = keyof typeof RpcVerbMap;
-export type ArgsSchemaFor<Verb extends RpcVerb> = typeof RpcVerbMap[Verb] extends { argsSchema: unknown }
-	? typeof RpcVerbMap[Verb]["argsSchema"] : never;
-export type ReturnSchemaFor<Verb extends RpcVerb> = typeof RpcVerbMap[Verb] extends { returnSchema: unknown }
-	? typeof RpcVerbMap[Verb]["returnSchema"] : never;
+export type RequestSchemaFor<Verb extends RpcVerb> = typeof RpcVerbMap[Verb] extends { requestSchema: unknown }
+	? typeof RpcVerbMap[Verb]["requestSchema"] : never;
+export type ResponseSchemaFor<Verb extends RpcVerb> = typeof RpcVerbMap[Verb] extends { responseSchema: unknown }
+	? typeof RpcVerbMap[Verb]["responseSchema"] : never;
 export type TqKey<Verb extends RpcVerb> = z.infer<typeof RpcVerbMap[Verb]["tqkSchema"]>;
 
 export const setlistPacketConsumersByVerb = {
 	{{- range $_, $svc := $services }}
 		{{- range $_, $method := $svc.Methods }}
 			{{- if and (gt (len $method.Outputs) 0) (hasPrefix $method.Name "Watch") }}
-				{{- $cacheEntryTypeName := print $method.Name "Return"	}}
+				{{- $cacheEntryTypeName := print $method.Name "Response"	}}
 				{{- $verb := trimPrefix $method.Name "Watch" }}
-				{{- $returnSingleton := index $method.Outputs 0 }}
-				{{- $returnPayloadType := $returnSingleton.Type }}
-				{{- $returnEnvelope := $returnSingleton.Name }}
-				{{- $returnElemTypeName := trimPrefix $returnSingleton.Type.Expr "[]" }}
-				{{- if hasKey $typeMap $returnElemTypeName }}
-					{{ $returnElemTypeName = get $typeMap $returnElemTypeName }}
+				{{- $responseSingleton := index $method.Outputs 0 }}
+				{{- $responsePayloadType := $responseSingleton.Type }}
+				{{- $responseEnvelope := $responseSingleton.Name }}
+				{{- $responseElemTypeName := trimPrefix $responseSingleton.Type.Expr "[]" }}
+				{{- if hasKey $typeMap $responseElemTypeName }}
+					{{ $responseElemTypeName = get $typeMap $responseElemTypeName }}
 				{{- end }}
 				{{- $setlistPayloadType := "DEADBEEF" }}
 				{{- $multiplicity := "" }}
-				{{- if isListType $returnPayloadType }}
-					{{- $setlistPayloadType = $returnPayloadType.List.Elem }}
+				{{- if isListType $responsePayloadType }}
+					{{- $setlistPayloadType = $responsePayloadType.List.Elem }}
 					{{- $multiplicity = "multi" }}
 				{{- else }}
-					{{- $setlistPayloadType = $returnPayloadType }}
+					{{- $setlistPayloadType = $responsePayloadType }}
 					{{- $multiplicity = "single" }}
 				{{- end }}
-				{{- $setlistPayloadSchema := print $returnElemTypeName }}
-				{{- $returnSchema := print $method.Name "Return" }}
+				{{- $setlistPayloadSchema := print $responseElemTypeName }}
+				{{- $responseSchema := print $method.Name "Response" }}
 				{{- $hasInput := gt (len $method.Inputs) 0 }}
 	{{$verb}}: (tqc: QueryClient, rawTqk: QueryKey, rawPacket: WiredSetlistPacket) => {
 		const vrec = RpcVerbMap["{{$verb}}"];
 		const tqk = vrec.tqkSchema.parse(rawTqk);
 		type CacheEntryT = {{$cacheEntryTypeName}};
-		const deltaSchema = RpcTypeMap["{{$returnElemTypeName}}"].deltaTransitionSchema;
+		const deltaSchema = RpcTypeMap["{{$responseElemTypeName}}"].deltaTransitionSchema;
 		const deltaZprv = deltaSchema.safeParse(rawPacket);
 		const cacheEntry = tqc.getQueryData<CacheEntryT>(tqk);
-		const cachePayload = cacheEntry ? cacheEntry.{{$returnEnvelope}} : undefined;
-		const seal = (letter: unknown) => vrec.returnSchema.parse({ {{- $returnEnvelope -}}: letter});
+		const cachePayload = cacheEntry ? cacheEntry.{{$responseEnvelope}} : undefined;
+		const seal = (letter: unknown) => vrec.responseSchema.parse({ {{- $responseEnvelope -}}: letter});
 
 				{{- if eq $multiplicity "single" }}
 		const patchedNext = !!cachePayload && deltaZprv.success
@@ -262,7 +262,7 @@ export const setlistPacketConsumersByVerb = {
 
 			const wantedId = Ided.parse(rawPacket.next).id;
 			let found = false;
-			const next: {{$returnElemTypeName}}[] = [];
+			const next: {{$responseElemTypeName}}[] = [];
 			for (const elem of (cachePayload ?? [])) {
 				if (elem.id === wantedId) {
 					const newElem = {{$setlistPayloadSchema}}.parse(

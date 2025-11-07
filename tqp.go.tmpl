@@ -34,7 +34,7 @@
 {{- $byIdEnsurerFnm := print "ensure" $outTypeBaseName "ById"}}
 {{- $byIdFetcherFnm := print "watch" $outTypeBaseName "ById"}}
 
-export function ensure{{$baseName}}({tqc, mama{{if $hasInput}}, args{{end}}}: {tqc: QueryClient, mama: {{$service.Name}}{{if $hasInput}}, args: {{$baseName}}Args{{end}}}) {
+export function ensure{{$baseName}}({tqc, mama{{if $hasInput}}, args{{end}}}: {tqc: QueryClient, mama: {{$service.Name}}{{if $hasInput}}, args: {{$baseName}}Request{{end}}}) {
     return tqc.ensureQueryData({
         queryKey: {{$tsbn}}Tqk{{if $hasInput}}(args){{end}},
         queryFn: () => {{template "tqfn" dict "Method" $method "MethodMap" $methodMap "TypeMap" $typeMap}},
@@ -45,7 +45,7 @@ export function ensure{{$baseName}}({tqc, mama{{if $hasInput}}, args{{end}}}: {t
 {{-     if $isOutStub}}
 {{-         if hasKey $methodMap (firstLetterToUpper $byIdFetcherFnm)}}
 
-export function ensureFull{{$baseName}}({tqc, mama{{if $hasInput}}, args{{end}}}: {tqc: QueryClient, mama: {{$service.Name}}{{if $hasInput}}, args: {{$baseName}}Args{{end}}}) {
+export function ensureFull{{$baseName}}({tqc, mama{{if $hasInput}}, args{{end}}}: {tqc: QueryClient, mama: {{$service.Name}}{{if $hasInput}}, args: {{$baseName}}Request{{end}}}) {
     return ensure{{$baseName}}({tqc, mama{{if $hasInput}}, args{{end}}})
 {{-             if $isOutSlice }}.then(tqrv => Promise.all(tqrv.{{$out.Name}}.map(stub => {{$byIdEnsurerFnm}}({tqc, mama, args: { {{- $ribFetchFieldName}}Id: stub.id}}))));
 {{-             else if $out.Optional }}.then(tqrv => tqrv?.{{$out.Name}} ? {{$byIdEnsurerFnm}}({tqc, mama, args: { {{- $ribFetchFieldName}}Id: tqrv.{{$out.Name}}.id}}) : undefined);

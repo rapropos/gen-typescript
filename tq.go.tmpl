@@ -18,12 +18,6 @@ import {isDeepEqual} from "remeda";
 import {useEffect, useState, createContext, useContext} from "react";
 import {isAfter} from "date-fns";
 
-export const MamaContext = createContext<KingBasuraService>({} as KingBasuraService);
-
-export function useMothership() {
-	const rv = useContext(MamaContext);
-	return rv;
-}
 
 export type VerbedQueryKey = [string, ...unknown[]];
 
@@ -52,6 +46,13 @@ export const DEADBEEF_QUERY_OPTS = queryOptions({
 {{- $tqkDone := dict }}
 {{- $watchers := dict }}
 {{- $methodMap := dict }}
+
+export const {{$service.Name}}MamaContext = createContext<{{$service.Name}}>({} as {{$service.Name}});
+
+export function use{{$service.Name}}Mothership() {
+    const rv = useContext({{$service.Name}}MamaContext);
+    return rv;
+}
 
 {{- range $_, $method := $service.Methods}}
 {{-     set $methodMap $method.Name $method }}
