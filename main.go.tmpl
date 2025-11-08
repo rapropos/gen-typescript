@@ -5,7 +5,7 @@
 {{- set $opts "client" (ternary (in .Opts.client "" "true") true false) -}}
 {{- set $opts "server" (ternary (in .Opts.server "" "true") true false) -}}
 {{- set $opts "compat" (ternary (in .Opts.compat "" "true") true false) -}}
-{{- set $opts "WebrpcHeader" (ternary (eq (default .Opts.WebrpcHeader "true") "false") false true) -}}
+{{- set $opts "webrpcHeader" (ternary (eq (default .Opts.WebrpcHeader "true") "false") false true) -}}
 {{- set $opts "tq" (ternary (in .Opts.tq "" "true") true false) -}}
 {{- set $opts "infallibleTq" (ternary (in .Opts.infallibleTq "" "true") true false) -}}
 {{- set $opts "zod" (ternary (in .Opts.zod "" "true") true false) -}}
