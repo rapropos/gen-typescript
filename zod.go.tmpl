@@ -216,17 +216,17 @@ export const setlistPacketConsumersByVerb = {
 				{{- $hasInput := gt (len $method.Inputs) 0 }}
 	{{$verb}}: (tqc: QueryClient, rawTqk: QueryKey, rawPacket: WiredSetlistPacket) => {
 		const vrec = RpcVerbMap["{{$verb}}"];
-		const tqk = vrec.tqkSchema.parse(rawTqk);
+		const tqk = vrec.tqkSchema.parse(rawTqk, {reportInput: true});
 		type CacheEntryT = {{$cacheEntryTypeName}};
 		const deltaSchema = RpcTypeMap["{{$responseElemTypeName}}"].deltaTransitionSchema;
 		const deltaZprv = deltaSchema.safeParse(rawPacket);
 		const cacheEntry = tqc.getQueryData<CacheEntryT>(tqk);
 		const cachePayload = cacheEntry ? cacheEntry.{{$responseEnvelope}} : undefined;
-		const seal = (letter: unknown) => vrec.responseSchema.parse({ {{- $responseEnvelope -}}: letter});
+		const seal = (letter: unknown) => vrec.responseSchema.parse({ {{- $responseEnvelope -}}: letter}, {reportInput: true});
 
 				{{- if eq $multiplicity "single" }}
 		const patchedNext = !!cachePayload && deltaZprv.success
-			? {{$setlistPayloadSchema}}.parse(applyPatch(cachePayload, deltaZprv.data))
+			? {{$setlistPayloadSchema}}.parse(applyPatch(cachePayload, deltaZprv.data), {reportInput: true})
 			: undefined;
 
 		if (!("next" in rawPacket) || !rawPacket.next
@@ -238,7 +238,7 @@ export const setlistPacketConsumersByVerb = {
 		// - an addition
 		// - a full replace
 		// - a delta that has been inflated
-		const next = patchedNext ?? {{$setlistPayloadSchema}}.parse(rawPacket.next);
+		const next = patchedNext ?? {{$setlistPayloadSchema}}.parse(rawPacket.next, {reportInput: true});
 		const sealedNext = seal(next);
 		tqc.setQueryData<CacheEntryT>(tqk, sealedNext);
 				{{- else }}{{/* is a list */}}
@@ -260,13 +260,14 @@ export const setlistPacketConsumersByVerb = {
 			// so basically we are updating our entry with the relevant id or adding a new
 			// one if we don't find one.
 
-			const wantedId = Ided.parse(rawPacket.next).id;
+			const wantedId = Ided.parse(rawPacket.next, {reportInput: true}).id;
 			let found = false;
 			const next: {{$responseElemTypeName}}[] = [];
 			for (const elem of (cachePayload ?? [])) {
 				if (elem.id === wantedId) {
 					const newElem = {{$setlistPayloadSchema}}.parse(
-						deltaZprv.success ? applyPatch(elem, deltaZprv.data) : rawPacket.next);
+                    (deltaZprv.success ? applyPatch(elem, deltaZprv.data) : rawPacket.next),
+					   {reportInput: true});
 					next.push(newElem);
 					found = true;
 				} else {
@@ -279,7 +280,7 @@ export const setlistPacketConsumersByVerb = {
 					// no bueno, we have nothing to patch from
 					void tqc.invalidateQueries({queryKey: tqk});
 				}
-				const newElem = {{$setlistPayloadSchema}}.parse(rawPacket.next);
+				const newElem = {{$setlistPayloadSchema}}.parse(rawPacket.next, {reportInput: true});
 				next.push(newElem);
 			}
 
