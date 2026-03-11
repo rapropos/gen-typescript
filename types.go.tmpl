@@ -15,7 +15,11 @@
 export enum {{$type.Name}} {
 {{- range $i, $field := $type.Fields}}
   {{- if $i}},{{end}}
+  {{- if eq $type.Type.Expr "string"}}
   {{$field.Name}} = '{{$field.Value}}'
+  {{- else}}
+  {{$field.Name}} = '{{$field.Name}}'
+  {{- end}}
 {{- end}}
 }
 {{end -}}
