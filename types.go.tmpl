@@ -15,7 +15,7 @@
 export enum {{$type.Name}} {
 {{- range $i, $field := $type.Fields}}
   {{- if $i}},{{end}}
-  {{$field.Name}} = '{{$field.Name}}'
+  {{$field.Name}} = '{{$field.Value}}'
 {{- end}}
 }
 {{end -}}
