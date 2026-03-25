@@ -6,6 +6,7 @@
 {{- set $opts "server" (ternary (in .Opts.server "" "true") true false) -}}
 {{- set $opts "compat" (ternary (in .Opts.compat "" "true") true false) -}}
 {{- set $opts "webrpcHeader" (ternary (eq (default .Opts.webrpcHeader "true") "false") false true) -}}
+{{- set $opts "enum" (default .Opts.enum "enum") -}}
 
 {{- /* Print help on -help. */ -}}
 {{- if exists .Opts "help" -}}
@@ -20,6 +21,11 @@
     {{- template "help" $opts -}}
     {{- exit 1 -}}
   {{- end -}}
+{{- end -}}
+
+{{- if not (in $opts.enum "enum" "union") -}}
+  {{- stderrPrintf "-enum=%q is not supported, must be \"enum\" or \"union\"\n" $opts.enum -}}
+  {{- exit 1 -}}
 {{- end -}}
 
 {{- if ne .WebrpcVersion "v1" -}}

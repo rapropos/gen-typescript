@@ -12,6 +12,18 @@
 {{range $_i, $type := $types -}}
 
 {{if isEnumType $type }}
+{{- if eq $opts.enum "union"}}
+export const {{$type.Name}} = {
+{{- range $i, $field := $type.Fields}}
+  {{- if eq $type.Type.Expr "string"}}
+  {{$field.Name}}: '{{$field.Value}}',
+  {{- else}}
+  {{$field.Name}}: '{{$field.Name}}',
+  {{- end}}
+{{- end}}
+} as const
+export type {{$type.Name}} = (typeof {{$type.Name}})[keyof typeof {{$type.Name}}]
+{{- else}}
 export enum {{$type.Name}} {
 {{- range $i, $field := $type.Fields}}
   {{- if $i}},{{end}}
@@ -22,6 +34,7 @@ export enum {{$type.Name}} {
   {{- end}}
 {{- end}}
 }
+{{- end}}
 {{end -}}
 
 {{- if isAliasType $type }}
