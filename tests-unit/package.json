@@ -8,12 +8,18 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "test:update": "vitest run -u",
-    "generate": "webrpc-gen -schema=service.ridl -target=../ -out=client.gen.ts"
+    "generate": "webrpc-gen -schema=service.ridl -target=../ -out=client.gen.ts",
+    "generate:enum": "webrpc-gen -schema=enum.ridl -target=../ -client -out=enum-default.gen.ts && webrpc-gen -schema=enum.ridl -target=../ -client -enum=union -out=enum-union.gen.ts"
   },
   "devDependencies": {
     "@tsconfig/strictest": "^2.0.7",
     "@types/node": "^24.10.0",
     "typescript": "^5.9.3",
     "vitest": "^4.0.8"
+  },
+  "pnpm": {
+    "onlyBuiltDependencies": [
+      "esbuild"
+    ]
   }
 }
