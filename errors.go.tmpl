@@ -1,6 +1,7 @@
 {{- define "errors" -}}
 {{- $webrpcErrors := .WebrpcErrors -}}
 {{- $schemaErrors := .SchemaErrors -}}
+{{- $opts := .Opts -}}
 
 //
 // Errors
@@ -58,6 +59,27 @@ export class {{$error.Name}}Error extends WebrpcError {
 }
 {{ end }}
 
+{{- if eq $opts.enum "union"}}
+export const errors = {
+{{- range $_, $error := $webrpcErrors}}
+  {{$error.Name}}: '{{$error.Name}}',
+{{- end}}
+{{- range $_, $error := $schemaErrors}}
+  {{$error.Name}}: '{{$error.Name}}',
+{{- end}}
+} as const
+export type errors = (typeof errors)[keyof typeof errors]
+
+export const WebrpcErrorCodes = {
+{{- range $_, $error := $webrpcErrors}}
+  {{$error.Name}}: {{$error.Code}},
+{{- end }}
+{{- range $_, $error := $schemaErrors}}
+  {{$error.Name}}: {{$error.Code}},
+{{- end }}
+} as const
+export type WebrpcErrorCodes = (typeof WebrpcErrorCodes)[keyof typeof WebrpcErrorCodes]
+{{- else}}
 export enum errors {
 {{- range $_, $error := $webrpcErrors}}
   {{$error.Name}} = '{{$error.Name}}',
@@ -75,6 +97,7 @@ export enum WebrpcErrorCodes {
   {{$error.Name}} = {{$error.Code}},
 {{- end }}
 }
+{{- end}}
 
 export const webrpcErrorByCode: { [code: number]: any } = {
 {{- range $_, $error := $webrpcErrors}}
