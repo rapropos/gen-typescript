@@ -38,6 +38,69 @@ function UserProfile({ userId }) {
 
 The query keys follow the pattern `[ServiceName, methodName, request?]` and are fully type-safe with `as const` assertions.
 
+### Enum style: `enum` vs `union`
+
+TypeScript best practices are moving away from `enum` declarations — they emit runtime
+code that can't be erased, which is incompatible with the `erasableSyntaxOnly` tsconfig
+option and tooling that expects type-only syntax to disappear at build time.
+
+The `-enum` option lets you choose how schema enums are code-generated:
+
+| `-enum` value | Output |
+| ------------- | ------ |
+| `enum` (default) | Traditional TypeScript `export enum` |
+| `union` | `as const` object + union type (erasable, no runtime `enum`) |
+
+Given this schema:
+
+```ridl
+enum Kind: uint32
+  - USER
+  - ADMIN
+
+enum Intent: string
+  - openSession
+  - closeSession
+```
+
+`-enum=enum` (default) generates:
+
+```typescript
+export enum Kind {
+  USER = 'USER',
+  ADMIN = 'ADMIN'
+}
+
+export enum Intent {
+  openSession = 'openSession',
+  closeSession = 'closeSession'
+}
+```
+
+`-enum=union` generates:
+
+```typescript
+export const Kind = {
+  USER: 'USER',
+  ADMIN: 'ADMIN',
+} as const
+export type Kind = (typeof Kind)[keyof typeof Kind]
+
+export const Intent = {
+  openSession: 'openSession',
+  closeSession: 'closeSession',
+} as const
+export type Intent = (typeof Intent)[keyof typeof Intent]
+```
+
+The `union` style produces a value (the `const` object) and a type that share the same
+name, so it's a drop-in replacement anywhere the enum was used — function parameters,
+interface fields, and client/server code all reference the type by the same identifier.
+You still get autocompletion and access to members via `Kind.USER`, but nothing is left
+behind at runtime beyond a plain object.
+
+Passing any value other than `enum` or `union` (e.g. `-enum=foo`) prints an error and exits.
+
 ## Usage
 
 ```
@@ -67,6 +130,7 @@ Change any of the following values by passing `-option="Value"` CLI flag to `web
 | `-client`          | generate client code                    | `false`       | v0.0.1  |
 | `-server`          | generate server code                    | `false`       | v0.0.1  |
 | `-webrpcHeader`    | send Webrpc header in all HTTP requests | `true`        | v0.15.0 |
+| `-enum`            | enum codegen style: `enum` or `union`   | `enum`        | v0.27.0 |
 
 **Note:** Generated code requires ES2022+ runtime environment.
 
