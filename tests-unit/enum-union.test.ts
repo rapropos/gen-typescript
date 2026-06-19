@@ -1,8 +1,10 @@
 import { describe, it, expect } from 'vitest'
 import { readFileSync } from 'node:fs'
 import { fileURLToPath } from 'node:url'
+import { createRequire } from 'node:module'
+import { execFileSync } from 'node:child_process'
 
-// Union variant: enums generated with `-enum=union` as `as const` objects + union types.
+// Union variant: enums generated with `-enumStyle=union` as `as const` objects + union types.
 import {
   Kind,
   Intent,
@@ -80,4 +82,49 @@ describe('erasability', () => {
     expect(defaultSource).toContain('export enum errors {')
     expect(defaultSource).toContain('export enum WebrpcErrorCodes {')
   })
+})
+
+// Authoritative erasability check: compile each generated file under
+// `--erasableSyntaxOnly` and inspect the result. The union output must
+// compile clean; the default output must be rejected with TS1294
+// ("syntax not allowed when 'erasableSyntaxOnly' is enabled").
+const tscBin = createRequire(import.meta.url).resolve('typescript/bin/tsc')
+
+function compileErasable(file: string): { code: number; output: string } {
+  const path = fileURLToPath(new URL(`./${file}`, import.meta.url))
+  try {
+    const output = execFileSync(
+      process.execPath,
+      [
+        tscBin,
+        '--noEmit',
+        '--erasableSyntaxOnly',
+        '--strict',
+        '--target', 'ES2022',
+        '--lib', 'ES2022,DOM',
+        '--module', 'NodeNext',
+        '--moduleResolution', 'NodeNext',
+        '--skipLibCheck',
+        path,
+      ],
+      { encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'] },
+    )
+    return { code: 0, output }
+  } catch (err: any) {
+    return { code: err.status ?? 1, output: `${err.stdout ?? ''}${err.stderr ?? ''}` }
+  }
+}
+
+describe('erasableSyntaxOnly (tsc)', () => {
+  it('union output compiles cleanly under --erasableSyntaxOnly', () => {
+    const { code, output } = compileErasable('enum-union.gen.ts')
+    expect(output).toBe('')
+    expect(code).toBe(0)
+  }, 60_000)
+
+  it('default (enum) output is rejected under --erasableSyntaxOnly', () => {
+    const { code, output } = compileErasable('enum-default.gen.ts')
+    expect(code).not.toBe(0)
+    expect(output).toContain('TS1294')
+  }, 60_000)
 })
