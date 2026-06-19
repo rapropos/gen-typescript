@@ -94,10 +94,20 @@ export type Intent = (typeof Intent)[keyof typeof Intent]
 ```
 
 The `union` style produces a value (the `const` object) and a type that share the same
-name, so it's a drop-in replacement anywhere the enum was used — function parameters,
-interface fields, and client/server code all reference the type by the same identifier.
-You still get autocompletion and access to members via `Kind.USER`, but nothing is left
-behind at runtime beyond a plain object.
+name, so it's *mostly* a drop-in replacement anywhere the enum was used — function
+parameters, interface fields, and client/server code all reference the type by the same
+identifier. You still get autocompletion and access to members via `Kind.USER`, and
+nothing is left behind at runtime beyond a plain object.
+
+There are two behavioral differences from a real `enum` to be aware of:
+
+- **No reverse mapping for numeric enums.** A numeric TypeScript `enum` lets you look up a
+  member name by its value (`WebrpcErrorCodes[1000]` → `'Unauthorized'`). A `const` object
+  has no reverse entries, so `WebrpcErrorCodes[1000]` is `undefined`. Consumer code that maps
+  an error code back to its name this way must be updated. (Schema enums are unaffected — they
+  are generated with string values regardless of their backing type.)
+- **Members can't be used directly as types.** With an `enum` you can write `type T = Kind.USER`.
+  In the `union` style `Kind.USER` is a value, so use `type T = typeof Kind.USER` instead.
 
 Passing any value other than `enum` or `union` (e.g. `-enumStyle=foo`) prints an error and exits.
 
