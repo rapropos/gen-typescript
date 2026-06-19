@@ -12,7 +12,7 @@
 {{range $_i, $type := $types -}}
 
 {{if isEnumType $type }}
-{{- if eq $opts.enum "union"}}
+{{- if eq $opts.enumStyle "union"}}
 export const {{$type.Name}} = {
 {{- range $i, $field := $type.Fields}}
   {{- if eq $type.Type.Expr "string"}}

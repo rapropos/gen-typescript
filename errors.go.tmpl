@@ -59,7 +59,7 @@ export class {{$error.Name}}Error extends WebrpcError {
 }
 {{ end }}
 
-{{- if eq $opts.enum "union"}}
+{{- if eq $opts.enumStyle "union"}}
 export const errors = {
 {{- range $_, $error := $webrpcErrors}}
   {{$error.Name}}: '{{$error.Name}}',

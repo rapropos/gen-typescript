@@ -44,10 +44,10 @@ TypeScript best practices are moving away from `enum` declarations — they emit
 code that can't be erased, which is incompatible with the `erasableSyntaxOnly` tsconfig
 option and tooling that expects type-only syntax to disappear at build time.
 
-The `-enum` option lets you choose how schema enums are code-generated:
+The `-enumStyle` option lets you choose how schema enums are code-generated:
 
-| `-enum` value | Output |
-| ------------- | ------ |
+| `-enumStyle` value | Output |
+| ------------------ | ------ |
 | `enum` (default) | Traditional TypeScript `export enum` |
 | `union` | `as const` object + union type (erasable, no runtime `enum`) |
 
@@ -63,7 +63,7 @@ enum Intent: string
   - closeSession
 ```
 
-`-enum=enum` (default) generates:
+`-enumStyle=enum` (default) generates:
 
 ```typescript
 export enum Kind {
@@ -77,7 +77,7 @@ export enum Intent {
 }
 ```
 
-`-enum=union` generates:
+`-enumStyle=union` generates:
 
 ```typescript
 export const Kind = {
@@ -99,7 +99,7 @@ interface fields, and client/server code all reference the type by the same iden
 You still get autocompletion and access to members via `Kind.USER`, but nothing is left
 behind at runtime beyond a plain object.
 
-Passing any value other than `enum` or `union` (e.g. `-enum=foo`) prints an error and exits.
+Passing any value other than `enum` or `union` (e.g. `-enumStyle=foo`) prints an error and exits.
 
 ## Usage
 
@@ -130,7 +130,7 @@ Change any of the following values by passing `-option="Value"` CLI flag to `web
 | `-client`          | generate client code                    | `false`       | v0.0.1  |
 | `-server`          | generate server code                    | `false`       | v0.0.1  |
 | `-webrpcHeader`    | send Webrpc header in all HTTP requests | `true`        | v0.15.0 |
-| `-enum`            | enum codegen style: `enum` or `union`   | `enum`        | v0.27.0 |
+| `-enumStyle`       | enum codegen style: `enum` or `union`   | `enum`        | v0.27.0 |
 
 **Note:** Generated code requires ES2022+ runtime environment.
 
