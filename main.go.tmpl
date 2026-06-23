@@ -7,6 +7,7 @@
 {{- set $opts "compat" (ternary (in .Opts.compat "" "true") true false) -}}
 {{- set $opts "webrpcHeader" (ternary (eq (default .Opts.webrpcHeader "true") "false") false true) -}}
 {{- set $opts "schemaHash" (ternary (eq (default .Opts.schemaHash "true") "false") false true) -}}
+{{- set $opts "enumStyle" (default .Opts.enumStyle "enum") -}}
 
 {{- /* Print help on -help. */ -}}
 {{- if exists .Opts "help" -}}
@@ -21,6 +22,11 @@
     {{- template "help" $opts -}}
     {{- exit 1 -}}
   {{- end -}}
+{{- end -}}
+
+{{- if not (in $opts.enumStyle "enum" "union") -}}
+  {{- stderrPrintf "-enumStyle=%q is not supported, must be \"enum\" or \"union\"\n" $opts.enumStyle -}}
+  {{- exit 1 -}}
 {{- end -}}
 
 {{- if ne .WebrpcVersion "v1" -}}

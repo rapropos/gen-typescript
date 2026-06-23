@@ -38,6 +38,79 @@ function UserProfile({ userId }) {
 
 The query keys follow the pattern `[ServiceName, methodName, request?]` and are fully type-safe with `as const` assertions.
 
+### Enum style: `enum` vs `union`
+
+TypeScript best practices are moving away from `enum` declarations — they emit runtime
+code that can't be erased, which is incompatible with the `erasableSyntaxOnly` tsconfig
+option and tooling that expects type-only syntax to disappear at build time.
+
+The `-enumStyle` option lets you choose how schema enums are code-generated:
+
+| `-enumStyle` value | Output |
+| ------------------ | ------ |
+| `enum` (default) | Traditional TypeScript `export enum` |
+| `union` | `as const` object + union type (erasable, no runtime `enum`) |
+
+Given this schema:
+
+```ridl
+enum Kind: uint32
+  - USER
+  - ADMIN
+
+enum Intent: string
+  - openSession
+  - closeSession
+```
+
+`-enumStyle=enum` (default) generates:
+
+```typescript
+export enum Kind {
+  USER = 'USER',
+  ADMIN = 'ADMIN'
+}
+
+export enum Intent {
+  openSession = 'openSession',
+  closeSession = 'closeSession'
+}
+```
+
+`-enumStyle=union` generates:
+
+```typescript
+export const Kind = {
+  USER: 'USER',
+  ADMIN: 'ADMIN',
+} as const
+export type Kind = (typeof Kind)[keyof typeof Kind]
+
+export const Intent = {
+  openSession: 'openSession',
+  closeSession: 'closeSession',
+} as const
+export type Intent = (typeof Intent)[keyof typeof Intent]
+```
+
+The `union` style produces a value (the `const` object) and a type that share the same
+name, so it's *mostly* a drop-in replacement anywhere the enum was used — function
+parameters, interface fields, and client/server code all reference the type by the same
+identifier. You still get autocompletion and access to members via `Kind.USER`, and
+nothing is left behind at runtime beyond a plain object.
+
+There are two behavioral differences from a real `enum` to be aware of:
+
+- **No reverse mapping for numeric enums.** A numeric TypeScript `enum` lets you look up a
+  member name by its value (`WebrpcErrorCodes[1000]` → `'Unauthorized'`). A `const` object
+  has no reverse entries, so `WebrpcErrorCodes[1000]` is `undefined`. Consumer code that maps
+  an error code back to its name this way must be updated. (Schema enums are unaffected — they
+  are generated with string values regardless of their backing type.)
+- **Members can't be used directly as types.** With an `enum` you can write `type T = Kind.USER`.
+  In the `union` style `Kind.USER` is a value, so use `type T = typeof Kind.USER` instead.
+
+Passing any value other than `enum` or `union` (e.g. `-enumStyle=foo`) prints an error and exits.
+
 ## Usage
 
 ```
@@ -68,6 +141,7 @@ Change any of the following values by passing `-option="Value"` CLI flag to `web
 | `-server`          | generate server code                    | `false`       | v0.0.1  |
 | `-webrpcHeader`    | send Webrpc header in all HTTP requests | `true`        | v0.15.0 |
 | `-schemaHash=false` | don't emit schema hash + version consts | `true`        | v0.28.0 |
+| `-enumStyle`       | enum codegen style: `enum` or `union`   | `enum`        | v0.29.0 |
 
 **Note:** Generated code requires ES2022+ runtime environment.
 

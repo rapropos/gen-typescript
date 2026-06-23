@@ -27,3 +27,20 @@ jobs:
 
       - name: Git diff of regenerated files
         run: cd _examples && make diff
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Set up pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 9
+
+      - name: Unit tests (regenerate enum fixtures against current templates, then run vitest)
+        run: |
+          cd tests-unit
+          pnpm install --frozen-lockfile
+          pnpm generate:enum
+          pnpm test
